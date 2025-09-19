@@ -3,7 +3,7 @@ from goals import set_goal
 from database import init_db
 from datetime import datetime
 
-# --- Step 1: Initialize the database ---
+# --- Step 1: Initialize the database ---1
 init_db()
 
 # --- Step 2: Set default user ID ---
