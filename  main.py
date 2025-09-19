@@ -7,7 +7,7 @@ from utils import calculate_progress
 
 init_db()
 
-# Register and login
+# Register and login hello
 register("neel@example.com", "securepass123")
 user_id = login("neel@example.com", "securepass123")
 
