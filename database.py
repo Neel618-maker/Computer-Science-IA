@@ -10,7 +10,7 @@ def init_db():
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,))
         name TEXT NOT NULL,
         house TEXT NOT NULL,
-        student_id TEXT NOT NULL UNIQUE,
+        student_id INTEGER NOT NULL UNIQUE,
         password TEXT NOT NULL,
         exercise TEXT NOT NULL,
         reps INTEGER NOT NULL,
@@ -24,7 +24,7 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS user goals(
         goal_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id TEXT NOT NULL,
+        student_id INTEGER NOT NULL,
         exercise TEXT NOT NULL,
         target reps INTEGER NOT NULL,
         target weight REAL NOT NULL,
