@@ -55,10 +55,20 @@ def add_user(name, house, student_id, password, exercise="none"):
             WHERE student_id = ? AND password = ?
             LIMIT 1
         """, (student_id, hashed_pw))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            name = result[0]
+            print("Login successful. Welcome, {name}!")
+            return student_id
+        else:
+            print("Error: Invalid student ID or password.")
+            return None
   
   # Retrieve user info                                                                                     )                                    
 def get_user_info(student_id):
-    if not is_valid_student_id(student_id):
+    if not is_valid_student_id(str(student_id)):
         return None
     
     student_id = int(student_id)
@@ -85,13 +95,14 @@ def get_user_info(student_id):
     
 # Delete user and all related data
 def delete_user(student_id):
-    if not is_valid_student_id(student_id):
+    if not is_valid_student_id(str(student_id)):
         print("Error: student ID must be a 4-6 digit number.")
         return
     
     student_id = int(student_id)
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
+    
     cursor.execute("SELECT COUNT(*) FROM user_workouts WHERE student_id = ?", (student_id,))
     count = cursor.fetchone()[0]
 
