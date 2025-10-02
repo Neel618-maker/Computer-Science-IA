@@ -1,7 +1,9 @@
 import sqlite3
 import hashlib
-
-# has password
+# Validate Password
+def is_valid_password(passowrd):
+    return len(passowrd) >= 8
+# hash password
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -34,7 +36,7 @@ def add_user(name, house, student_id, password, exercise="none"):
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (name, house, student_id, hashed_pw, exercise, 0, 0.0, 1))
 
-    conn.commit
+    conn.commit()
     conn.close()
     print("user registered successfully.")
 
@@ -60,7 +62,7 @@ def add_user(name, house, student_id, password, exercise="none"):
 
         if result:
             name = result[0]
-            print("Login successful. Welcome, {name}!")
+            print(f"Login successful. Welcome, {name}!")
             return student_id
         else:
             print("Error: Invalid student ID or password.")
@@ -76,7 +78,7 @@ def get_user_info(student_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT name, house, password From user_workouts
+        SELECT name, house, password FROM user_workouts
         WHERE student_id = ?
         LIMIT 1
     """, (student_id))
@@ -117,3 +119,62 @@ def delete_user(student_id):
     conn.commit()
     conn.close()
     print(f" User '{student_id}' and all related data deleted.")
+
+    # Update a user
+def update_user(student_id, new_name=None, new_house=None, new_password=None):
+    conn = sqlite3.connect("fitness.db")
+    cursor = conn.cursor()
+
+    fields = []
+    values = []
+
+    if new_name is not None:
+        fields.append("name = ?")
+        values.append(new_name)
+    if new_house is not None:
+        fields.append("house = ?")
+        values.append(new_house)
+    if new_password is not None:
+        fields.append("password = ?")
+        values.append(hash_password(new_password))
+
+    if not fields:
+        print("error: No fields tto update")
+        conn.close()
+        return
+    values.append(student_id)
+    query =  f"UPDATE user_workouts SET {', '.join(fields)} WHERE student_id = ?"
+
+    cursor.execute(query, values)
+    conn.commit()
+    conn.close()
+    print(f"user {student_id} profile updated.")
+
+    # Updated latest workout for a specific exercise
+    def update_exercise(student_id, exercise, new_reps=None, new_weight=None):
+        conn = sqlite3.connect("fitness.db")
+        cursor = conn.cursor()
+
+        fields = []
+        values = []
+
+        if new_reps is not None:
+            fields.append("reps =?")
+            values.append(new_reps)
+        if new_weight is not None:
+            fields.append("weight = ?")
+            values.append(new_weight)
+        if not fields:
+            print("Error : no exercise fields to update")
+            conn.close()
+            return
+        
+        values.append(student_id)
+        values.append(exercise)
+        query = f"UPDATE user_workouts SET {', '.join(fields)} WHERE student_id = ? AND exercise = ?"
+        
+        cursor.execute(query, values)
+        conn.commit()
+        conn.close()
+        print(f"Updated latest {exercise} Workout for use {student_id}.")
+
