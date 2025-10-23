@@ -57,7 +57,8 @@ def update_workout(workout_id, new_reps, new_weight):
     conn.close()
 
     # Delete Records
-    def delete_prediction(prediction_id):
+    
+def delete_prediction(prediction_id):
         conn = sqlite3.connect("fitness.db")
         cursor = conn.cursor()
 
@@ -70,7 +71,7 @@ def update_workout(workout_id, new_reps, new_weight):
         conn.close()
 
         # join records
-    def join_workouts_and_predictions(student_id):
+def join_workouts_and_predictions(student_id):
         conn = sqlite3.connect("fitness.db")
         cursor = conn.cursor
 
@@ -81,9 +82,12 @@ def update_workout(workout_id, new_reps, new_weight):
            ON u.student_id = p.student_id AND u.exercise = p.exercise
            WHERE u.student_id = ?
            ORDER BY u.datetime ASC
-        """, (student_id)
-                                                                                                                                                                                      )
+        """, (student_id))
+        
         results = cursor.fetchall()
         conn.close()
         return results
+# execute the join functon
+join_workouts_and_predictions(123456)
+
 

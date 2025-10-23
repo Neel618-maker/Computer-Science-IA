@@ -32,4 +32,20 @@ def add_workout(student_id, exercise, reps, weight, is_bodyweight=False):
     conn.commit()
     conn.close()
     return "workout added successfully"
+
+def get_workouts(student_id):
+    conn = sqlite3.connect("fitness.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, exercise, reps, weight, datetime, is_bodyweight
+        FROM user workouts
+        WHERE student_id = ?
+        ORDER BY datetime Asc
+    """, (student_id))   
+
+    results = cursor.fetchall()
+    conn.close()
+    return results
+                                         
                                                                                                                                                                
