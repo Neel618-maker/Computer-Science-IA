@@ -16,8 +16,8 @@ def init_db():
         reps INTEGER NOT NULL,
         weight REAL NOT NULL,
         is_bodyweight INTEGER NOT NULL,
-        datetime TEXT DEFAULT CURRENT_TIMESTAMP
-   ) 
+        datetime TEXT DEFAULT CURRENT_TIMESTAMP)
+        
 """)
     
 
@@ -87,7 +87,8 @@ def join_workouts_and_predictions(student_id):
         results = cursor.fetchall()
         conn.close()
         return results
-# execute the join functon
-join_workouts_and_predictions(123456)
+
+
+
 
 
