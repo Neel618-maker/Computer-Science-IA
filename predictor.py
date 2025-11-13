@@ -77,7 +77,81 @@ from datetime import datetime
 import schedule 
 import time
 
-def show_leaderboard()
+def show_leaderboard(student_id=None, exercise_filter=None):
+    conn = sqlite3.connect("fitness.db")
+    cursor = conn.cursor()
+
+    query = """
+        SELECT u.student_id, u.name, w.exercise, MIN(w.datetime), MAX(w.datetime), MIN(w.reps), MAX(w.reps)
+        FROM user_workouts w
+        JOIN users u on u.student_id = w.student_id
+    """
+
+    filters = []
+    params = []
+
+    if student_id is not None:
+        filters.append("u.student_id = ?")
+        params.append(student_id)
+    if exercise_filter is not None:
+        filters.append("w.exercise = ?")
+        params.append(exercise_filter.lower())
+
+    if filters:
+        query += " WHERE " + " AND ".join(filters)
+
+    query += " GROUP BY u.student_id, w.exercise"
+
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+
+    leaderboard = []
+ 
+    for student_id, name, exercise, start_date, end_date, min_reps, max_reps in rows:
+      try:
+       start = datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
+       end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
+       days = max((end - start).days, 1)
+       rate = (max_reps - min_reps) / days
+       leaderboard.append((student_id, name, exercise, round(rate, 2)))
+      except:
+          continue
+      
+    leaderboard.sort(key=lambda x: x[2], reverse=True)
+
+    # Display Leaderboard
+    if student_id and exercise_filter:
+        print(f"Personal Leaderboard for {exercise_filter.capitalize()}")
+    elif exercise_filter:
+        print(f"Leaderboard for {exercise_filter.capitalize()}")
+    elif student_id:
+        print(f"Personal Leaderboard for User ID: {student_id}")
+    else:
+        print(f"Overall Leaderboard - Rate of Progression (Reps/Days)")
+
+    for i, (name, exercise, rate) in enumerate(leaderboard[ :10], 1):
+        print (f"{i}. {name} - {exercise}: {rate} reps/day")
+        return leaderboard
+    
+    # Daily Leaderboard snapshot
+    def daily_leaderboard():
+        print("daily Leaderboard snapshot")
+        show_leaderboard()
+        show_leaderboard(exercise_filter="pushups") # example exercise
+        show_leaderboard(student_id=123456) # example student id
+
+        schedule.every().day.at("08:00").do(daily_leaderboard)
+
+        if __name__ == "__main__":
+            print("Leaderboard scheduler started. Waiting for next run...")
+            while True:
+                schedule.run_pending()
+                time.sleep(60)
+
+              
+
+     
 
 
 
