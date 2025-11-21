@@ -3,19 +3,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
+import schedule
+import time
 
 
 # Get workout history for a student and exercise
 def get_workout_data(student_id, exercise):
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
-    cursor.execute(""")
-        SELECT datetime, reps, weight FROM user_workouts
-        WHERE student_id = ? AND exercise = ?
-        ORDER BY datetime ASC
-    """, (student_id, exercise.lower()))
-    rows = cursor.fetchcall()
+    cursor.execute(" SELECT datetime, reps, weight FROM user_workouts WHERE student_id = ? AND exercise = ? ORDER BY datetime ASC ", (student_id, exercise.lower()))
+    rows = cursor.fetchall()
     conn.close()
+
+    if not rows:
+        return [], [], []
 
     dates = [datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") for row in rows]
     reps =  [row[1] for row in rows]
@@ -39,7 +40,7 @@ def predict_targets(dates, reps, weights):
     reps_ci = 1.96 * np.std(reps) / np.sqrt(len(reps))
     weights_ci = 1.96 * np.std(weights) / np.sqrt(len(weights))
 
-    return future_days, future_reps, future_weights, reps_ci, weights_ci
+    return days, future_days, future_reps, future_weights, reps_ci, weights_ci
 
 # actual vs  prediction plot
 
@@ -72,10 +73,6 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.show()
 
     # Leaderboard displays
-import sqlite3
-from datetime import datetime
-import schedule 
-import time
 
 def show_leaderboard(student_id=None, exercise_filter=None):
     conn = sqlite3.connect("fitness.db")
@@ -117,25 +114,14 @@ def show_leaderboard(student_id=None, exercise_filter=None):
        leaderboard.append((student_id, name, exercise, round(rate, 2)))
       except:
           continue
-      
-    leaderboard.sort(key=lambda x: x[2], reverse=True)
+   
+    leaderboard.sort(key=lambda x: x[3], reverse=True) 
 
-    # Display Leaderboard
-    if student_id and exercise_filter:
-        print(f"Personal Leaderboard for {exercise_filter.capitalize()}")
-    elif exercise_filter:
-        print(f"Leaderboard for {exercise_filter.capitalize()}")
-    elif student_id:
-        print(f"Personal Leaderboard for User ID: {student_id}")
-    else:
-        print(f"Overall Leaderboard - Rate of Progression (Reps/Days)")
-
-    for i, (name, exercise, rate) in enumerate(leaderboard[ :10], 1):
-        print (f"{i}. {name} - {exercise}: {rate} reps/day")
-        return leaderboard
+    return leaderboard[: 10]
     
-    # Daily Leaderboard snapshot
-    def daily_leaderboard():
+# Daily leaderboard sanpshot
+    
+def daily_leaderboard():
         print("daily Leaderboard snapshot")
         show_leaderboard()
         show_leaderboard(exercise_filter="pushups") # example exercise

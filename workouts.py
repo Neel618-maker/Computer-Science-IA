@@ -2,10 +2,7 @@ import sqlite3
 from datetime import datetime
 
 # Valid exercises
-valid_exercises = [
-    "situps" , "pushups", "squat", "deadlift", "bench press", "leg press", 
-    "pullups", "row", "lateral raises", "plank", "lunge", "bicep curl", "tricep curl"
-]
+valid_exercises = ["situps" , "pushups", "squat", "deadlift", "bench press", "leg press", "pullups", "row", "lateral raises", "plank", "lunge", "bicep curl", "tricep curl"]
 def is_valid_exercise(exercise):
     return exercise.lower() in valid_exercises
 
@@ -28,10 +25,7 @@ def add_workout(student_id, exercise, reps, weight, is_bodyweight=False):
 
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
-    cursor.execute("""
-       INSERT INTO user_workouts (student_id, exercise, reps, weight, datetime, is_bodyweight)
-       VALUES (?, ?, ?, ?, ?, ?)
-   """, (student_id, exercise.lower(), reps, weight, timestamp, int(is_bodyweight)))
+    cursor.execute("INSERT INTO user_workouts (student_id, exercise, reps, weight, datetime, is_bodyweight) VALUES (?, ?, ?, ?, ?, ?)", (student_id, exercise.lower(), reps, weight, timestamp, int(is_bodyweight)))
     conn.commit()
     conn.close()
     return "workout added successfully"
@@ -40,12 +34,7 @@ def get_workouts(student_id):
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT id, exercise, reps, weight, datetime, is_bodyweight
-        FROM user_workouts
-        WHERE student_id = ?
-        ORDER BY datetime Asc
-    """, (student_id))   
+    cursor.execute("SELECT id, exercise, reps, weight, datetime, is_bodyweight FROM user_workouts WHERE student_id = ? ORDER BY datetime Asc", (student_id))   
 
     results = cursor.fetchall()
     conn.close()
@@ -67,11 +56,7 @@ def update_workout(workout_id, exercise, reps, weight, is_bodyweight):
         conn.close()
         return " No workout found with ID {workout_id}"
     
-    cursor.execute("""
-            UPDATE user_workouts
-            SET exercise = ?, reps = ?, weight = ?, is_bodyweight = ?
-            WHERE id = ?
-    """, (exercise.lower(), reps, weight, int(is_bodyweight), workout_id))
+    cursor.execute("UPDATE user_workouts SET exercise = ?, reps = ?, weight = ?, is_bodyweight = ? WHERE id = ?", (exercise.lower(), reps, weight, int(is_bodyweight), workout_id))
     conn.commit()
     conn.close()
     return "workout updated successfully"
@@ -81,15 +66,12 @@ def delete_workout(workout_id):
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
 
-    cursor.execute(""" SELECT 1 FROM user_workouts WHERE id = ?""", (workout_id))
+    cursor.execute("SELECT 1 FROM user_workouts WHERE id = ?", (workout_id))
     if not cursor.fetchone():
         conn.close()
         return f"No workout found with ID {workout_id}"
     
-    cursor.execute("""
-        DELETE FROM user_workouts
-        WHERE id = ?
-    """, (workout_id))
+    cursor.execute("DELETE FROM user_workouts WHERE id = ?", (workout_id))
     conn.commit()
     conn.close()
     return "workout entrry {workout_id} deleted successfully"
@@ -99,12 +81,7 @@ def get_workouts(student_id, exercise):
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT id, exercise, reps, weight, datetime, is_bodyweight
-        FROM user_workouts
-        WHERE student_id = ? AND exercise = ?
-        ORDER BY datetime ASC
-    """, (student_id, exercise.lower()))
+    cursor.execute("SELECT id, exercise, reps, weight, datetime, is_bodyweight FROM user_workouts WHERE student_id = ? AND exercise = ? ORDER BY datetime ASC", (student_id, exercise.lower()))
     results = cursor.fetchall()
     conn.close()
     return results

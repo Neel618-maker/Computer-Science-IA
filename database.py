@@ -3,6 +3,15 @@ import sqlite3
 def init_db():
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
+# users table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        student_id INTEGER PRIMARY KEY, 
+        name TEXT NOT NULL,
+        password TEXT NOT NULL
+    )
+ """)                                                       
+        
 
 # Raw user and workout log table
     cursor.execute("""

@@ -31,10 +31,7 @@ def add_user(name, house, student_id, password, exercise="none"):
         return
     
     # insert placeholder row to store identity
-    cursor.execute("""
-        INSERT INTO user_workouts (name, house, student_id, password, exercise, reps, weight, is_bodyweight)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (name, house, student_id, hashed_pw, exercise, 0, 0.0, 1))
+    cursor.execute("INSERT INTO user_workouts (name, house, student_id, password, exercise, reps, weight, is_bodyweight)  VALUES (?, ?, ?, ?, ?, ?, ?, ?) ", (name, house, student_id, hashed_pw, exercise, 0, 0.0, 1))
 
     conn.commit()
     conn.close()
@@ -52,11 +49,7 @@ def add_user(name, house, student_id, password, exercise="none"):
         conn = sqlite3.connect("fitness.db")
         cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT name FROM user_workouts
-            WHERE student_id = ? AND password = ?
-            LIMIT 1
-        """, (student_id, hashed_pw))
+        cursor.execute("SELECT name FROM user_workouts WHERE student_id = ? AND password = ?  LIMIT 1", (student_id, hashed_pw))
         result = cursor.fetchone()
         conn.close()
 
@@ -77,11 +70,7 @@ def get_user_info(student_id):
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT name, house, password FROM user_workouts
-        WHERE student_id = ?
-        LIMIT 1
-    """, (student_id))
+    cursor.execute("SELECT name, house, password FROM user_workouts WHERE student_id = ? LIMIT 1", (student_id))
     result = cursor.fetchone()
     conn.close()
     
