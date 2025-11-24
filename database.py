@@ -18,7 +18,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS user_workouts(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        house TEXT NOT NULL,
+        house TEXT 
         student_id INTEGER NOT NULL UNIQUE,
         password TEXT NOT NULL,
         exercise TEXT NOT NULL,
