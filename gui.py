@@ -4,6 +4,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3
 import matplotlib.pyplot as plt
+from datetime import datetime
+import pytz
 from workouts import add_workout, get_workouts
 from predictor import (get_workout_data, predict_targets, plot_predictions, show_leaderboard)
 
@@ -18,13 +20,22 @@ def update_leaderboard(table, data, mode="global"):
         for rank, (exercise, rate) in enumerate(data, start=1):
             table.insert("", "end", values=(rank, exercise, f"{rate:.2f}"))
     else:
-        table["columns"] = ("col1", "col2", "col3", "col4")
-        table.heading("col1", text="Rank")
-        table.heading("col2", text="Name")
-        table.heading("col3", text="Exercise")
-        table.heading("col4", text="Rate (Reps/Day)")
-        for rank, (name, exercise, rate) in enumerate(data, start=1):
-            table.insert("", "end", values=(rank, name, exercise, f"{rate:.2f}"))
+        if mode == "global":
+         table["columns"] = ("col1", "col2", "col3", "col4", "col5")
+         table.heading("col1", text="Rank")
+         table.heading("col2", text="student_id")
+         table.heading("col3", text="Name")
+         table.heading("col4", text="Exercise")
+         table.heading("col5", text="Rate (Reps/Day)")
+        for rank, row in enumerate(data, start=1):
+            student_id, name, exercise, rate = row
+            try:
+                rate_val = float(rate)
+                rate_fmt = f"{rate_val:.2f}"
+            except (ValueError, TypeError):
+                rate_fmt = str(rate)
+            table.insert("", "end", values=(rank, student_id, name, exercise, rate_fmt))
+            
 def show_global_leaderboard(table):
     try:
         data = show_leaderboard()
@@ -61,13 +72,13 @@ def show_predictions(student_id, exercise_entry):
     except Exception as e:
         messagebox.showerror("Error", str(e))
 # Workouts
-def add_workout(student_id, name, exercise, reps, weight, is_bodyweight):
+def add_workout(student_id, exercise, reps, weight, is_bodyweight, timestamp):
     try:
         with sqlite3.connect("fitness.db") as conn:
           cursor = conn.cursor()
-          cursor.execute("INSERT INTO user_workouts (student_id, name, exercise, reps, weight, is_bodyweight) VALUES (?, ?, ?, ?, ?, ?)", (student_id, name, exercise, reps, weight, is_bodyweight,))
+          cursor.execute("INSERT INTO user_workouts (student_id, datetime, exercise, reps, weight, is_bodyweight) VALUES (?, ?, ?, ?, ?, ?)", (student_id, timestamp, exercise, reps, weight, is_bodyweight,))
           conn.commit()
-          conn.close()
+          
     except Exception as e:
         messagebox.showerror("Database Error", str(e))
 
@@ -118,26 +129,33 @@ def delete_workout(student_id, table):
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
-def log_workout(student_id, name, workout_entry, exercise_dropdown, exercise_var, workout_table):
+def log_workout(student_id, workout_entry, exercise_dropdown, exercise_var, workout_table):
     workout = workout_entry.get().strip()
     if not workout:
         messagebox.showerror("Input Error", "Please enter a workout.")
         return
+    
     
     try:
         parts = [p.strip() for p in workout.split(",")]
         if len(parts) != 4:
             raise ValueError("Format: exercise, reps, weight, is_bodyweight (1 or 0)")
         
-        exercise = parts[0].lower()
+        exercise = parts[0].lower() 
         reps = int(parts[1])
         weight = float(parts[2])
         is_bodyweight = int(parts[3])
 
         if is_bodyweight not in (0, 1):
             raise ValueError("is_bodyweight must be 1 (True) or 0 (False)")
+        valid_exercises = ["situps" , "pushups", "squat", "deadlift", "bench press", "leg press", "pullups", "row", "lateral raises", "plank", "lunge", "bicep curl", "tricep curl"]
+        if exercise not in valid_exercises:
+            messagebox.showerror("Input Error", f"{exercise} is not a valid exercise.")
+            return
+        hong_kong = pytz.timezone("Asia/Hong_Kong")
+        timestamp = datetime.now(hong_kong).strftime("%Y-%m-%d %H:%M:%S")
         
-        add_workout(student_id, name, exercise, reps, weight, is_bodyweight)
+        add_workout(student_id, exercise, reps, weight, is_bodyweight, timestamp)
         messagebox.showinfo("Success", f"workout logged: {exercise}, ({reps} reps, {weight} kg, bodyweight={is_bodyweight})")
         workout_entry.delete(0, tk.END)
 
@@ -169,8 +187,8 @@ def open_file(filename):
 
   
 
-def show_progress_chart(student_id, exercise_var):
-    exercise = exercise_var.get().strip().lower()
+def show_progress_chart(student_id, exercise):
+    exercise = exercise.strip().lower()
     if not exercise:
         messagebox.showerror("Input Error", "Please select an exercise.")
         return
@@ -240,7 +258,8 @@ def launch_dashboard(student_id, name):
     tab_control.add(tab_workouts, text="workouts")
 
     tk.Label(tab_workouts, text="Add Workout", font=("Helvetica", 12)).pack(pady=10)
-    tk.Label(tab_workouts, text="Enter Workout (exercise, reps, weight, is_bodyweight (1 or 0) - saved with your name", font=("Helvetica", 10), fg="gray").pack(pady=2)
+    tk.Label(tab_workouts, text="Enter Workout (exercise, reps, weight, is_bodyweight (1 or 0) - saved with your name, Valid exercises include situps, pushups, squat, deadlift, bench press, leg press, pullups, row, lateral raises, plank, lunge, bicep curl, tricep curl", 
+    font=("Helvetica", 10), fg="gray").pack(pady=2)
 
     workout_entry = tk.Entry(tab_workouts, width=50)
     workout_entry.pack(pady=5)
@@ -250,7 +269,7 @@ def launch_dashboard(student_id, name):
     exercise_dropdown = ttk.Combobox(tab_workouts, textvariable=exercise_var, values=exercises, state="readonly")
     exercise_dropdown.pack(pady=5)
 
-    tk.Button(tab_workouts, text="Add Workout", command=lambda: log_workout(student_id, name, workout_entry, exercise_dropdown, exercise_var, workout_table)).pack(pady=5)
+    tk.Button(tab_workouts, text="Add Workout", command=lambda: log_workout(student_id, workout_entry, exercise_dropdown, exercise_var, workout_table)).pack(pady=5)
     tk.Button(tab_workouts, text="Delete Selected Workout", command=lambda: delete_workout(student_id, workout_table)).pack(pady=5)
     tk.Label(tab_workouts, text="Workout History", font=("Helvetica", 12)).pack(pady=10)
 
@@ -269,15 +288,21 @@ def launch_dashboard(student_id, name):
 
 # Charts Tab
     tab_charts = ttk.Frame(tab_control)
-    tab_control.add(tab_charts, text="charts")
+    tab_control.add(tab_charts, text="Charts")
     tk.Label(tab_charts, text="Visualize Progress", font=("Helvetica", 12)).pack(pady=10)
 
-    exercise_var = tk.StringVar()
-    exercise_dropdown = ttk.Combobox(tab_charts, textvariable=exercise_var, state="readonly")
-    exercise_dropdown['values'] = get_exercise_list(student_id)
-    exercise_dropdown.pack(pady=5)
+    exercise_dropdown = ttk.Combobox(tab_charts, state="readonly")
+    
+    exercises = get_exercise_list(student_id)
+    if isinstance(exercises, str):
+        exercises = [exercises]
 
-    tk.Button(tab_charts, text="Generate Chart", command=lambda: show_progress_chart(student_id, exercise_var.get())).pack(pady=10)
+    exercise_dropdown['values'] = exercises
+    exercise_dropdown.pack(pady=5)
+    if exercises:
+       exercise_dropdown.current(0)
+
+    tk.Button(tab_charts, text="Generate Chart", command=lambda: show_progress_chart(student_id, exercise_dropdown.get())).pack(pady=10)
 
     tab_control.pack(expand=1, fill="both")
     root.mainloop()

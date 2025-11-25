@@ -15,10 +15,10 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_workouts (
            id INTEGER PRIMARY KEY AUTOINCREMENT,
-           student_id INTEGER NOT NULL,                          )
+           student_id INTEGER NOT NULL,                          
            exercise TEXT NOT NULL,
            reps INTEGER NOT NULL,
-           WEIGHT REAL NOT NULL,
+           weight REAL NOT NULL,
            is_bodyweight INTEGER NOT NULL,
            datetime TEXT DEFAULT CURRENT_TIMESTAMP,
            FOREIGN KEY (student_id) REFERENCES users(student_id)
@@ -90,7 +90,14 @@ def delete_workout(workout_id: int):
 init_db()
 
 
+import sqlite3
 
+conn = sqlite3.connect("fitness.db")
+cursor = conn.cursor()
+
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+tables = cursor.fetchall()
+print(tables)
 
 
 
