@@ -9,6 +9,9 @@ import pytz
 from workouts import add_workout, get_workouts
 from predictor import (get_workout_data, predict_targets, plot_predictions, show_leaderboard)
 
+conn = sqlite3.connect("fitness.db")
+conn.execute("PRAGMA foreign_keys = ON")
+cursor = conn.cursor()
 #Leaderboard window
 def update_leaderboard(table, data, mode="global"):
     table.delete(*table.get_children())
@@ -168,7 +171,14 @@ def log_workout(student_id, workout_entry, exercise_dropdown, exercise_var, work
         messagebox.showerror("Input Error", str(e))
 
 
-    
+def delete_account(student_id):
+    if messagebox.askyesno("confirm Delete", f"are you sure you want to delete account {student_id}?"):
+        try:
+            cursor.execute("DELETE FROM users WHERE student_id = ?", (student_id,))
+            conn.commit()
+            messagebox.showinfo("Account Deleted", f"Account {student_id} has been removed.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))    
 
 # Charts
 import os
@@ -232,6 +242,7 @@ def launch_dashboard(student_id, name):
     exercises = get_exercise_list(student_id)
     exercise_var = tk.StringVar()
     exercise_dropdown = ttk.Combobox(tab_control, textvariable=exercise_var, values=exercises, state="readonly")
+    
 
     # Leaderboards Tab
     tab_leaderboard = ttk.Frame(tab_control)
@@ -268,6 +279,8 @@ def launch_dashboard(student_id, name):
     exercise_var = tk.StringVar()
     exercise_dropdown = ttk.Combobox(tab_workouts, textvariable=exercise_var, values=exercises, state="readonly")
     exercise_dropdown.pack(pady=5)
+    delete_button = tk.Button(tab_workouts, text="Delete Account", command=lambda: delete_account(student_id))
+    delete_button.pack(pady=5)
 
     tk.Button(tab_workouts, text="Add Workout", command=lambda: log_workout(student_id, workout_entry, exercise_dropdown, exercise_var, workout_table)).pack(pady=5)
     tk.Button(tab_workouts, text="Delete Selected Workout", command=lambda: delete_workout(student_id, workout_table)).pack(pady=5)

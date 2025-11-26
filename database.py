@@ -21,7 +21,7 @@ def init_db():
            weight REAL NOT NULL,
            is_bodyweight INTEGER NOT NULL,
            datetime TEXT DEFAULT CURRENT_TIMESTAMP,
-           FOREIGN KEY (student_id) REFERENCES users(student_id)
+           FOREIGN KEY (student_id) REFERENCES users(student_id) ON DELETE CASCADE
         )                                                   
     """)
 
