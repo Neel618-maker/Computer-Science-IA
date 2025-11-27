@@ -6,7 +6,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users(
-        student_id INTEGER PRIMARY KEY,
+        student_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         password TEXT NOT NULL
      )

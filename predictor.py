@@ -29,16 +29,16 @@ def predict_targets(dates, reps, weights):
         return None # Not enough data to make an accurate prediction
     
     days = np.array([(d - dates[0]).days for d in dates]). reshape(-1, 1)
-    future_days = np.array([days[-1][0] + i for i in range (1, 6)]).reshape(-1, 1)
-
+    future_days = np.array([days[-1][0] + i for i in range (1, 6)]).reshape(-1, 1) 
     model_reps = LinearRegression().fit(days, reps)
     model_weight = LinearRegression().fit(days, weights)
 
     future_reps = model_reps.predict(future_days)
     future_weights = model_weight.predict(future_days)
 
+    # Formula Taken From maths studies
     reps_ci = 1.96 * np.std(reps) / np.sqrt(len(reps))
-    weights_ci = 1.96 * np.std(weights) / np.sqrt(len(weights))
+    weights_ci = 1.96 * np.std(weights) / np.sqrt(len(weights)) 
 
     return days, future_days, future_reps, future_weights, reps_ci, weights_ci
 

@@ -179,6 +179,14 @@ def delete_account(student_id):
             messagebox.showinfo("Account Deleted", f"Account {student_id} has been removed.")
         except Exception as e:
             messagebox.showerror("Error", str(e))    
+def add_users(student_id, name, password):
+    try:
+        cursor.execute("INSERT INTO users *student_id, name, password) VALUES (?, ?, ?)"), (student_id, name, password,)
+        conn.commit()
+        messagebox.showinfo("Success", f"User {name} added with student ID {student_id}.")
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+
 
 # Charts
 import os
@@ -412,6 +420,7 @@ def open_registration():
         if is_student_id_taken(int(student_id)):
             messagebox.showerror("Error", "Student ID is alrady taken")
             return
+
         
         conn = sqlite3.connect("fitness.db")
         cursor = conn.cursor()
@@ -428,6 +437,7 @@ def open_registration():
 tk.Button(login_window, text="Login", command=login).pack(pady=10)
 tk.Button(login_window, text="register", command=open_registration).pack(pady=5)
 login_window.mainloop()
+
 
 
    
