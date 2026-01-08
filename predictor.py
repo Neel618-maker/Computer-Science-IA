@@ -2,7 +2,7 @@ import sqlite3
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 import schedule
 import time
 
@@ -30,8 +30,8 @@ def predict_targets(dates, reps, weights):
     
     days = np.array([(d - dates[0]).days for d in dates]). reshape(-1, 1)
     future_days = np.array([days[-1][0] + i for i in range (1, 6)]).reshape(-1, 1) 
-    model_reps = LinearRegression().fit(days, reps)
-    model_weight = LinearRegression().fit(days, weights)
+    model_reps = RandomForestRegressor(n_estimators=100, random_state=42).fit(days, reps)
+    model_weight = RandomForestRegressor(n_estimators=100, random_state=42).fit(days, weights)
 
     future_reps = model_reps.predict(future_days)
     future_weights = model_weight.predict(future_days)

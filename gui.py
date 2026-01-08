@@ -181,7 +181,7 @@ def delete_account(student_id):
             messagebox.showerror("Error", str(e))    
 def add_users(student_id, name, password):
     try:
-        cursor.execute("INSERT INTO users *student_id, name, password) VALUES (?, ?, ?)"), (student_id, name, password,)
+        cursor.execute("INSERT INTO users (student_id, name, password) VALUES (?, ?, ?)"), (student_id, name, password,)
         conn.commit()
         messagebox.showinfo("Success", f"User {name} added with student ID {student_id}.")
     except Exception as e:
@@ -268,9 +268,9 @@ def launch_dashboard(student_id, name):
     tab_control.add(tab_prediction, text="Predictions")
 
     tk.Label(tab_prediction, text="Enter Exercise", font=("Helvetica", 14)).pack(pady=10)
-    excercise_entry = tk.Entry(tab_prediction)
-    excercise_entry.pack(pady=5)
-    tk.Button(tab_prediction, text="show Predictions", command=lambda: show_predictions(student_id, excercise_entry)).pack(pady=10)
+    exercise_entry = tk.Entry(tab_prediction)
+    exercise_entry.pack(pady=5)
+    tk.Button(tab_prediction, text="Show Predictions", command=lambda: show_predictions(student_id, exercise_entry)).pack(pady=10)
 
     # workouts Tab
     tab_workouts = ttk.Frame(tab_control)
@@ -432,7 +432,7 @@ def open_registration():
         messagebox.showinfo("Success", "Account created successfully!")
         reg_window.destroy()
 
-    tk.Button(reg_window, text="create account", command=register).pack(pady=10)
+    tk.Button(reg_window, text="Create account", command=register).pack(pady=10)
 
 tk.Button(login_window, text="Login", command=login).pack(pady=10)
 tk.Button(login_window, text="register", command=open_registration).pack(pady=5)
