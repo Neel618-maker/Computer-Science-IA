@@ -181,11 +181,19 @@ def delete_account(student_id):
             messagebox.showerror("Error", str(e))    
 def add_users(student_id, name, password):
     try:
-        cursor.execute("INSERT INTO users (student_id, name, password) VALUES (?, ?, ?)"), (student_id, name, password,)
+        conn = sqlite3.connect("fitness.db")
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (student_id, name, password) VALUES (?, ?, ?)", (student_id, name, password))
         conn.commit()
         messagebox.showinfo("Success", f"User {name} added with student ID {student_id}.")
+    except sqlite3.IntegrityError:
+        messagebox.showerror("Error", f"student ID {student_id} already exists.")
+        conn.close()
     except Exception as e:
         messagebox.showerror("Error", str(e))
+
+    finally:
+        conn.close()
 
 
 # Charts
@@ -371,7 +379,7 @@ def login():
     if result:
         name, stored_pw = result
         if password == stored_pw:
-            messagebox.showinfo("Login successful", f"welcome, {name} !")
+            messagebox.showinfo("Login successful", f"welcome, {name}!")
             login_window.destroy()
             launch_dashboard(int(student_id), name)
         else: 

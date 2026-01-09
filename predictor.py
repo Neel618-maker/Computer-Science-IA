@@ -36,6 +36,9 @@ def predict_targets(dates, reps, weights):
     future_reps = model_reps.predict(future_days)
     future_weights = model_weight.predict(future_days)
 
+    future_reps = np.maximum.accumulate(future_reps)
+    future_weights = np.maximum.accumulate(future_weights)
+
     # Formula Taken From maths studies
     reps_ci = 1.96 * np.std(reps) / np.sqrt(len(reps))
     weights_ci = 1.96 * np.std(weights) / np.sqrt(len(weights)) 
@@ -51,10 +54,13 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.subplot(1, 2, 1)
     plt.plot(days, reps, label = "Actual Reps", marker='o')
     plt.plot(future_days, future_reps, label="predicted Reps", linestyle='--', marker='x')
-    plt.fill_between(future_days.flatten(), future_reps - reps_ci, future_reps + reps_ci, color='gray', alpha=0.2, label="95% CI")
+    lower_reps = np.maximum.accumulate(future_reps - reps_ci)
+    upper_reps = future_reps + reps_ci
+    plt.fill_between(future_days.flatten(), lower_reps, upper_reps, color='gray', alpha=0.2, label="95% CI")
     plt.title(f"Reps Prediction for {exercise.capitalize()}")
     plt.xlabel("Days since first workout")
     plt.ylabel("reps")
+    plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
 
     # weight plot
@@ -62,10 +68,13 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.subplot(1, 2, 2)
     plt.plot(days, weights, label="Actual Weight", marker='o')
     plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
-    plt.fill_between(future_days.flatten(), future_weights - weights_ci, future_weights + weights_ci, color='red', alpha=0.2, label="95% CI")
+    lower_weights = np.maximum.accumulate(future_weights - weights_ci)
+    upper_weights = future_weights + weights_ci
+    plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
     plt.title(f"Weight Prediction for {exercise.capitalize()}")
     plt.xlabel("Days since first workout")
     plt.ylabel("weight (Kg)")
+    plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
 
     plt.tight_layout()
@@ -112,7 +121,8 @@ def show_leaderboard(student_id=None, exercise_filter=None):
        days = max((end - start).days, 1)
        rate = (max_reps - min_reps) / days
        leaderboard.append((student_id, name, exercise, round(rate, 2)))
-      except:
+      except ValueError as e:
+          print(f"Skipping row due to error: {e}")
           continue
    
     leaderboard.sort(key=lambda x: x[3], reverse=True) 
@@ -123,9 +133,9 @@ def show_leaderboard(student_id=None, exercise_filter=None):
     
 def daily_leaderboard():
         print("daily Leaderboard snapshot")
-        show_leaderboard()
-        show_leaderboard(exercise_filter="pushups") # example exercise
-        show_leaderboard(student_id=123456) # example student id
+        print(show_leaderboard())
+        print(show_leaderboard(exercise_filter="pushups")) # example exercise
+        print(show_leaderboard(student_id=123456)) # example student id
 
         schedule.every().day.at("08:00").do(daily_leaderboard)
 
