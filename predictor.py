@@ -67,7 +67,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate"):
     if len(reps) < 5: reps_ci *= 0.5
     if len(weights) < 5: weights_ci *= 0.5
 
-    return days, future_days, future_reps, future_weights, reps_ci, weights_ci
+    return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
 
 # actual vs  prediction plot
 
