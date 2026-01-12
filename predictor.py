@@ -25,20 +25,41 @@ def get_workout_data(student_id, exercise):
     return dates, reps, weights
 
 # predict future reps and weight using linear regression
-def predict_targets(dates, reps, weights):
+def predict_targets(dates, reps, weights, user_level="intermediate"):
     if len(dates) < 2:
         return None # Not enough data to make an accurate prediction
     
     days = np.array([(d - dates[0]).days for d in dates]). reshape(-1, 1)
     future_days = np.array([days[-1][0] + i for i in range (1, 6)]).reshape(-1, 1) 
+
+    reps_rate = (reps[-1] - reps[0]) / max((dates[-1] - dates[0]).days, 1)
+    weights_rate = (weights[-1] - weights[0]) / max((dates[-1] - dates[0]).days, 1)
+
+    if user_level == "intermediate":
+        max_reps, max_weights = 60, 120
+    elif user_level == "expert":
+        max_reps, max_weights = 100, 170
+    else:
+        max_reps, max_weights = 60, 120
+
+    if reps[-1] >= 0.9 * max_reps or weights[-1] >= 0.9 * max_weights:
+        user_level = "expert"
+        max_reps, max_weights = 100, 170
+
     iso_reps = IsotonicRegression(out_of_bounds='clip')
     iso_reps.fit(days.flatten(), reps)
-    future_reps = iso_reps.predict(future_days.flatten())
-    future_reps = np.maximum.accumulate(future_reps)
-
+    iso_pred = iso_reps.predict(future_days.flatten())
+    alpha = 0.1
+    ceiling_reps = reps[-1] + (max_reps - reps[-1]) * (1 - np.exp(-alpha * np.arange(1, len(future_days)+1)))
+    future_reps = np.minimum(ceiling_reps, np.maximum.accumulate(iso_pred))
+    future_reps += reps_rate * np.arange(1, len(future_days) + 1)
+    
     model_weights = RandomForestRegressor(n_estimators=100, random_state=42).fit(days, weights)
-    future_weights = model_weights.predict(future_days)
-    future_weights = np.maximum.accumulate(future_weights)
+    rf_pred = model_weights.predict(future_days)
+    future_weights = weights[-1] + (max_weights - weights[-1]) * (1 - np.exp(-alpha * np.arange(1, len(future_days)+1)))
+    ceiling_weights = np.maximum.accumulate(future_weights)
+    future_weights = np.minimum(ceiling_weights, np.maximum.accumulate(rf_pred))
+    future_weights += weights_rate * np.arange(1, len(future_days) + 1)
 
     # Formula Taken From maths studies
     reps_ci = 1.96 * np.std(reps) / np.sqrt(len(reps))
@@ -50,7 +71,7 @@ def predict_targets(dates, reps, weights):
 
 # actual vs  prediction plot
 
-def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id):
+def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level="intermediate"):
     plt.figure(figsize=(12, 5))
 
     # reps plot
@@ -60,7 +81,7 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     lower_reps = np.maximum.accumulate(future_reps - reps_ci)
     upper_reps = future_reps + reps_ci
     plt.fill_between(future_days.flatten(), lower_reps, upper_reps, color='gray', alpha=0.2, label="95% CI")
-    plt.title(f"Reps Prediction for {exercise.capitalize()}")
+    plt.title(f"Reps Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level")
     plt.xlabel("Days since first workout")
     plt.ylabel("Reps")
     plt.grid(True, linestyle="--", alpha=0.6)
@@ -74,14 +95,14 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     lower_weights = np.maximum.accumulate(future_weights - weights_ci)
     upper_weights = future_weights + weights_ci
     plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
-    plt.title(f"Weight Prediction for {exercise.capitalize()}")
+    plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
     plt.xlabel("Days since first workout")
     plt.ylabel("Weight (Kg)")
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig(f"prediction_{student_id}_{exercise}.png")
+    plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
     plt.show()
 
     # Leaderboard displays

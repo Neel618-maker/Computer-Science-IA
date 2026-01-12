@@ -67,9 +67,13 @@ def show_predictions(student_id, exercise_entry):
             return
         result = predict_targets(dates, reps, weights)
         if result:
-            days, future_days, future_reps, future_weights, reps_ci, weights_ci = result
-            plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id)
-            messagebox.showinfo("Prediction Complete", f"Prediction plot generated for {exercise}.")
+            days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level = result
+            plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level)
+    
+            if user_level == "expert":
+                messagebox.showinfo("Level Up!", f"congratulations based on your progress in {exercise}, you have reached expert level!")
+            else:
+                messagebox.showinfo("Prediction Complete", f"Prediction plot generated for {exercise}.")
         else:
             messagebox.showinfo("Insufficient Data to make a strong prediction")
     except Exception as e:
@@ -278,6 +282,10 @@ def launch_dashboard(student_id, name):
     tk.Label(tab_prediction, text="Enter Exercise", font=("Helvetica", 14)).pack(pady=10)
     exercise_entry = tk.Entry(tab_prediction)
     exercise_entry.pack(pady=5)
+
+    level_label = tk.Label(tab_prediction, text="Current Level: Intermediate", font=("Helvetica", 12, "bold"))
+    level_label.pack(pady=5)
+   
     tk.Button(tab_prediction, text="Show Predictions", command=lambda: show_predictions(student_id, exercise_entry)).pack(pady=10)
 
     # workouts Tab
