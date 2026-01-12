@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.isotonic import IsotonicRegression
 import schedule
 import time
 
@@ -30,18 +31,20 @@ def predict_targets(dates, reps, weights):
     
     days = np.array([(d - dates[0]).days for d in dates]). reshape(-1, 1)
     future_days = np.array([days[-1][0] + i for i in range (1, 6)]).reshape(-1, 1) 
-    model_reps = RandomForestRegressor(n_estimators=100, random_state=42).fit(days, reps)
-    model_weight = RandomForestRegressor(n_estimators=100, random_state=42).fit(days, weights)
-
-    future_reps = model_reps.predict(future_days)
-    future_weights = model_weight.predict(future_days)
-
+    iso_reps = IsotonicRegression(out_of_bounds='clip')
+    iso_reps.fit(days.flatten(), reps)
+    future_reps = iso_reps.predict(future_days.flatten())
     future_reps = np.maximum.accumulate(future_reps)
+
+    model_weights = RandomForestRegressor(n_estimators=100, random_state=42).fit(days, weights)
+    future_weights = model_weights.predict(future_days)
     future_weights = np.maximum.accumulate(future_weights)
 
     # Formula Taken From maths studies
     reps_ci = 1.96 * np.std(reps) / np.sqrt(len(reps))
     weights_ci = 1.96 * np.std(weights) / np.sqrt(len(weights)) 
+    if len(reps) < 5: reps_ci *= 0.5
+    if len(weights) < 5: weights_ci *= 0.5
 
     return days, future_days, future_reps, future_weights, reps_ci, weights_ci
 
@@ -59,7 +62,7 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.fill_between(future_days.flatten(), lower_reps, upper_reps, color='gray', alpha=0.2, label="95% CI")
     plt.title(f"Reps Prediction for {exercise.capitalize()}")
     plt.xlabel("Days since first workout")
-    plt.ylabel("reps")
+    plt.ylabel("Reps")
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
 
@@ -73,7 +76,7 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
     plt.title(f"Weight Prediction for {exercise.capitalize()}")
     plt.xlabel("Days since first workout")
-    plt.ylabel("weight (Kg)")
+    plt.ylabel("Weight (Kg)")
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
 
