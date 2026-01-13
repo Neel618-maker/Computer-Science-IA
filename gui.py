@@ -54,7 +54,7 @@ def show_personal_leaderboard(table, student_id):
     except Exception as e:
         messagebox.showerror("Error", str(e))
 # Predictions
-def show_predictions(student_id, exercise_entry):
+def show_predictions(student_id, exercise_entry, level_label, table_widget):
     exercise = exercise_entry.get().strip().lower()
     if not exercise:
         messagebox.showerror("Input Error", "Please enter an exercise name.")
@@ -68,12 +68,15 @@ def show_predictions(student_id, exercise_entry):
         result = predict_targets(dates, reps, weights)
         if result:
             days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level = result
-            plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level)
-    
+            future_days, future_reps, future_weights, reps_ci, weights_ci = plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level)
+            level_label.config(text=f"Current Level: {user_level.capitalize()}", fg="gold" if user_level == "expert" else "green")
             if user_level == "expert":
                 messagebox.showinfo("Level Up!", f"congratulations based on your progress in {exercise}, you have reached expert level!")
             else:
                 messagebox.showinfo("Prediction Complete", f"Prediction plot generated for {exercise}.")
+            table_widget.delete(*table_widget.get_children())
+            for i in range(len(future_days)):
+                table_widget.insert("", "end", values=(int(future_days[i]), int(round(future_reps[i])), round(future_weights[i], 1), f"± {int(round(reps_ci))}", f"± {round(weights_ci, 1)}" ))    
         else:
             messagebox.showinfo("Insufficient Data to make a strong prediction")
     except Exception as e:
@@ -285,8 +288,14 @@ def launch_dashboard(student_id, name):
 
     level_label = tk.Label(tab_prediction, text="Current Level: Intermediate", font=("Helvetica", 12, "bold"))
     level_label.pack(pady=5)
-   
-    tk.Button(tab_prediction, text="Show Predictions", command=lambda: show_predictions(student_id, exercise_entry)).pack(pady=10)
+
+    prediction_table = ttk.Treeview(tab_prediction, columns=("Day", "Reps", "Weight (Kg)", "Reps CI", "Weight CI"), show="headings")
+    for col in prediction_table["columns"]:
+        prediction_table.heading(col, text=col)
+        prediction_table.column(col, anchor="center", width=120)
+    prediction_table.pack(pady=10, expand=True, fill="both")
+
+    tk.Button(tab_prediction, text="Show Predictions", command=lambda: show_predictions(student_id, exercise_entry, level_label, prediction_table)).pack(pady=10)
 
     # workouts Tab
     tab_workouts = ttk.Frame(tab_control)

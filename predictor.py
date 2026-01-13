@@ -81,7 +81,7 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     lower_reps = np.maximum.accumulate(future_reps - reps_ci)
     upper_reps = future_reps + reps_ci
     plt.fill_between(future_days.flatten(), lower_reps, upper_reps, color='gray', alpha=0.2, label="95% CI")
-    plt.title(f"Reps Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level")
+    plt.title(f"Reps Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
     plt.xlabel("Days since first workout")
     plt.ylabel("Reps")
     plt.grid(True, linestyle="--", alpha=0.6)
@@ -104,6 +104,8 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.tight_layout()
     plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
     plt.show()
+
+    return future_days, future_reps, future_weights, reps_ci, weights_ci
 
     # Leaderboard displays
 
