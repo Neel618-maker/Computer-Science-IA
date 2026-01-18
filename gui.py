@@ -159,7 +159,7 @@ def log_workout(student_id, workout_entry, exercise_dropdown, exercise_var, work
         if reps <= 0:
            messagebox.showerror("Input Error", "Reps and Weight must be positive numbers.")
            return
-        if weight <= 0:
+        if weight < 0:
             messagebox.showerror("Input Error", "Reps and Weight must be positive numbers.")
             return
 
