@@ -156,6 +156,13 @@ def log_workout(student_id, workout_entry, exercise_dropdown, exercise_var, work
         weight = float(parts[2])
         is_bodyweight = int(parts[3])
 
+        if reps <= 0:
+           messagebox.showerror("Input Error", "Reps and Weight must be positive numbers.")
+           return
+        if weight <= 0:
+            messagebox.showerror("Input Error", "Reps and Weight must be positive numbers.")
+            return
+
         if is_bodyweight not in (0, 1):
             raise ValueError("is_bodyweight must be 1 (True) or 0 (False)")
         valid_exercises = ["situps" , "pushups", "squat", "deadlift", "bench press", "leg press", "pullups", "row", "lateral raises", "plank", "lunge", "bicep curl", "tricep curl"]
