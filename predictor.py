@@ -36,15 +36,15 @@ def predict_targets(dates, reps, weights, user_level="intermediate"):
     weights_rate = (weights[-1] - weights[0]) / max((dates[-1] - dates[0]).days, 1)
 
     if user_level == "intermediate":
-        max_reps, max_weights = 60, 120
+        max_reps, max_weights = 60, 20
     elif user_level == "expert":
-        max_reps, max_weights = 100, 170
+        max_reps, max_weights = 100, 70
     else:
-        max_reps, max_weights = 60, 120
+        max_reps, max_weights = 60, 20
 
     if reps[-1] >= 0.9 * max_reps or weights[-1] >= 0.9 * max_weights:
         user_level = "expert"
-        max_reps, max_weights = 100, 170
+        max_reps, max_weights = 100, 70
 
     iso_reps = IsotonicRegression(out_of_bounds='clip')
     iso_reps.fit(days.flatten(), reps)
