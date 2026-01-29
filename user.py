@@ -1,15 +1,15 @@
 import sqlite3
-import hashlib
+import hashlib # most things here are commented on in my GUI
 # Validate Password
 def is_valid_password(passowrd):
-    return len(passowrd) >= 8
+    return len(passowrd) >= 8 # Checks if password is more than or equal to 8 characters
 # hash password
-def hash_password(password):
+def hash_password(password): # Function that allows the password to hash
     return hashlib.sha256(password.encode()).hexdigest()
 
 # Validate student ID format
 def is_valid_student_id(sid):
-    return sid.isdigit() and 1000 <= int(sid) <= 999999
+    return sid.isdigit() and 1000 <= int(sid) <= 999999 # student ID must be between 4 and 6 characters
 
 # register a new user
 def add_user(name, house, student_id, password, exercise="none"):
@@ -22,8 +22,8 @@ def add_user(name, house, student_id, password, exercise="none"):
 
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
-
-    # check for duplicate 
+ 
+    # checks for duplicates of student_id
     cursor.execute("SELECT 1 FROM user_workouts WHERE student_id = ?", (student_id,))
     if cursor.fetchone():
         print("Error: Student ID already exists.")

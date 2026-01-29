@@ -1,6 +1,6 @@
 import sqlite3
 from datetime import datetime
-
+# Commented on most things here in the GUI
 # Valid exercises
 valid_exercises = ["situps" , "pushups", "squat", "deadlift", "bench press", "leg press", "pullups", "row", "lateral raises", "plank", "lunge", "bicep curl", "tricep curl"]
 def is_valid_exercise(exercise):

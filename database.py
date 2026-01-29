@@ -1,17 +1,18 @@
 import sqlite3
 
 def init_db():
-    conn = sqlite3.connect("fitness.db")
+    conn = sqlite3.connect("fitness.db") 
+    # Connects to the database file (Creates if it doesn't exists)
     cursor = conn.cursor()
-
+    # Creates users table to store all users informaation with name and password, student_id is the unique identifier
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users(
-        student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS users( 
+        student_id INTEGER PRIMARY KEY AUTOINCREMENT, 
         name TEXT NOT NULL,
-        password TEXT NOT NULL
+        password TEXT NOT NULL 
      )
     """)
-
+# Creates the user workouts table to store all workout entries for each user
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_workouts (
            id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,11 +23,12 @@ def init_db():
            is_bodyweight INTEGER NOT NULL,
            datetime TEXT DEFAULT CURRENT_TIMESTAMP,
            FOREIGN KEY (student_id) REFERENCES users(student_id) ON DELETE CASCADE
-        )                                                   
+        )                                                    
     """)
+    # Creates a join to users table on  the foreign key of student_id
 
-    conn.commit()
-    conn.close()
+    conn.commit() # commits the changes to the database
+    conn.close() # closes the connection to the database
 
     # USER functions
 def is_student_id_taken(student_id: int) -> bool:
