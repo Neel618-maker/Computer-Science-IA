@@ -103,9 +103,9 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         user_level = "expert"
         max_reps, max_weights = 100, 70
     # Makes sure that these predictions are capped at a certain level
-    future_reps = [min(r, max_reps) for r in future_reps]
-    future_weights = [min(w, max_weights) for w in future_weights]
-
+    future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+    future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
+  # This ensures predictions do not exceed max levels
     # Next we calculate the 95% confidence intervals
     # this shows that these predictions are approximations
     # not certain values just to help users to plan workouts
