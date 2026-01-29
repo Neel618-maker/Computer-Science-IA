@@ -87,8 +87,8 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     weights_coeffs = polynomial_regression(days, weights, degree)
 
     # Predictions for reps and weight in the future days
-    future_reps = [float(predict(reps_coeffs, d)) for d in future_days]
-    future_weights = [float(predict(weights_coeffs, d)) for d in future_days]
+    future_reps = np.array(future_reps, dtype=float)
+    future_weights = np.array(future_weights, dtype=float)
 
    # basic if condition if user achieves 90% of the max reps or weights
    # They can ugrade to the next level
