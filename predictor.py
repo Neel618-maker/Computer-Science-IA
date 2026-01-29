@@ -2,8 +2,6 @@ import sqlite3
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.isotonic import IsotonicRegression
 import schedule
 import time
 
@@ -23,18 +21,57 @@ def get_workout_data(student_id, exercise):
     reps =  [row[1] for row in rows]
     weights = [row[2] for row in rows]
     return dates, reps, weights
+   # Polynomial Regression Algorithm
+def polynomial_regression(x_values, y_values, degree=2):
+    # First step is to create the design matrix where each row 
+    # corresponds to a power of x (days since first workout)
+    # works out exact numbers for the curve to match the data closely
+    X = [[x**i for i in range(degree+1)]for x in x_values]
+    XT = list(map(list, zip(*X))) # swap rows and columns in matrix X
+    XT_X = [[sum(a*b for a, b in zip(row, col))for col in zip(*X)] for row in XT]
+    # The code above just multiplies matrix XT with matrix X
+    XT_y = [sum(a*b for a, b in zip(row, y_values)) for row in XT]
+    # The code above multiplies matrix XT with vector y_values
+    coeffs = gaussian_elimination(XT_X, XT_y)
+    return coeffs
 
-# predict future reps and weight using linear regression
-def predict_targets(dates, reps, weights, user_level="intermediate"):
-    if len(dates) < 2:
+# Solve equations using the Gaussian elimination model
+# Performs forward elimination and back substitution 
+# Solves system of equations
+
+def gaussian_elimination(A, b):
+    n = len(A)
+    # Forward elimination to reduce matrix to upper triangular form
+    for i in range(n):
+        pivot = A[i][i]
+        for J in range(i, n):
+            A[i][J] /= pivot
+            b[i] /=pivot
+            for k in range (i+1, n):
+                factor = A[k][i]
+                for J in range(i, n):
+                    A[k][J] -= factor * A[i][J]
+                b[k] -= factor * b[i]
+    # Back substitutiion to solvefor each coefficient
+    # Starts from the bottom row and works upwards
+    x = [0]*n
+    for i in range(n-1, -1, -1):
+        x[i] = b[i] - sum(A[i][J] * x[J] for J in range (i+1, n))
+    return x
+
+
+
+
+# predict future reps and weight using Polynomial regression and user level implementation
+def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
+    if len(dates) < 2: # If less than 2 workouts are logged
         return None # Not enough data to make an accurate prediction
-    
-    days = np.array([(d - dates[0]).days for d in dates]). reshape(-1, 1)
-    future_days = np.array([days[-1][0] + i for i in range (1, 6)]).reshape(-1, 1) 
-
-    reps_rate = (reps[-1] - reps[0]) / max((dates[-1] - dates[0]).days, 1)
-    weights_rate = (weights[-1] - weights[0]) / max((dates[-1] - dates[0]).days, 1)
-
+    # This function allowws dates to be converted into days since first workout
+    days = np.array([(d - dates[0]).days for d in dates])
+    future_days = np.arange(days[-1] + 1, days[-1] + 6)
+    #  +6 to predict the next 5 days weekly predictions
+    # Polynomial REGRESSION FOR Reps
+   
     if user_level == "intermediate":
         max_reps, max_weights = 60, 20
     elif user_level == "expert":
