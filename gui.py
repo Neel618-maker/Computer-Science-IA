@@ -68,7 +68,7 @@ def show_predictions(student_id, exercise_entry, level_label, table_widget):
         result = predict_targets(dates, reps, weights)
         if result:
             days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level = result
-            future_days, future_reps, future_weights, reps_ci, weights_ci = plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level)
+            plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level)
             level_label.config(text=f"Current Level: {user_level.capitalize()}", fg="gold" if user_level == "expert" else "green")
             if user_level == "expert":
                 messagebox.showinfo("Level Up!", f"congratulations based on your progress in {exercise}, you have reached expert level!")
