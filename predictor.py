@@ -47,13 +47,13 @@ def gaussian_elimination(A, b):
         # Scale the pivot row so pivot becomes 1
         for J in range(i, n): 
             A[i][J] /= pivot
-            b[i] /=pivot
+        b[i] /=pivot
             # Eliminate the current variable from all rows below
-            for k in range (i+1, n):
-                factor = A[k][i]
-                for J in range(i, n):
-                    A[k][J] -= factor * A[i][J]
-                b[k] -= factor * b[i]
+        for k in range (i+1, n):
+            factor = A[k][i]
+            for J in range(i, n):
+                A[k][J] -= factor * A[i][J]
+            b[k] -= factor * b[i]
     # Back substitutiion to solvefor each coefficient
     # Starts from the bottom row and works upwards
     x = [0]*n
@@ -87,8 +87,8 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     weights_coeffs = polynomial_regression(days, weights, degree)
 
     # Predictions for reps and weight in the future days
-    future_reps = [float[predict(reps_coeffs, d)] for d in future_days]
-    future_weights = [float[predict(weights_coeffs, d)] for d in future_days]
+    future_reps = [float(predict(reps_coeffs, d)) for d in future_days]
+    future_weights = [float(predict(weights_coeffs, d)) for d in future_days]
 
    # basic if condition if user achieves 90% of the max reps or weights
    # They can ugrade to the next level
