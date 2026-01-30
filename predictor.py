@@ -74,7 +74,7 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
+def predict_targets(dates, reps, weights=None, exercise_name="bench press", user_level="intermediate", degree=2):
     if len(dates) < 2: # If less than 2 workouts are logged
         return None # Not enough data to make an accurate prediction
     # This function allowws dates to be converted into days since first workout
@@ -82,20 +82,18 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     future_days = np.arange(days[-1] + 1, days[-1] + 6)
     #  +6 to predict the next 5 days weekly predictions
     # Polynomial REGRESSION FOR Reps and weighrs
-    # get the coeffs for reps and weights
+    # get the coeffs for reps 
     reps_coeffs = polynomial_regression(days, reps, degree)
-    weights_coeffs = polynomial_regression(days, weights, degree)
+    
 
-    # Predictions for reps and weight in the future days
-
+    # Predictions for reps  in the future days
     future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
-    future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
-    # Clamp predictions so they never go below last actual values
-    # Ensures reps and weights stay non negative
+    
+    
     last_reps = reps[-1]
-    last_weights = weights[-1]
     avg_reps = np.mean(reps)
-    avg_weights = np.mean(weights)
+    reps_ci = 1.96 * (max(reps) - min(reps)) / max(len(reps), 1)
+   
 
    
 
@@ -108,6 +106,30 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         max_reps, max_weights = 200, 90
     else: # user level is defaulted to intermediate
         max_reps, max_weights = 150, 70
+    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
+    is_bodyweight = exercise_name.lower() in bodyweight_exercises
+
+    if is_bodyweight:
+        for i in range(len(future_days)):
+            if i % 3 == 0:
+                future_reps[i] *=0.90
+            if future_reps[i] > max_reps * 0.7:
+                future_reps[i] *= 0.95
+            if future_reps[i] < max_reps * 0.4:
+                future_reps[i] *= 1.03
+        min_reps = max(last_reps * 0.7, avg_reps * 0.5)
+        future_reps = np.clip(future_reps, min_reps, max_reps)
+
+        return days, future_days, future_reps, None, reps_ci, None, user_level
+    else:
+        weights_coeffs = polynomial_regression(days, weights, degree)
+        future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
+
+        last_weights = weights[-1]
+        avg_weights = np.mean(weights)
+        weights_ci = 1.96 * (max(weights) - min(weights)) / max(len(weights), 1)
+
+
 # Trade off ensures that if weights increase for an exercise
 # Reps will be reduced proportionally 
 # This fully reflects real training as when weights increase reps may decrease
@@ -137,7 +159,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         if i % 3 == 0:
             future_reps[i] *= 0.90
         
-        if  abs(future_reps[i] - future_weights[i] > 0.5 * max(future_reps[i], future_weights[i])):
+        if  abs(future_reps[i] - future_weights[i]) > 0.5 * max(future_reps[i], future_weights[i]):
             avg_value = (future_reps[i] + future_weights[i]) / 2
             future_reps[i] = (future_reps[i] + avg_value) / 2
             future_weights[i] = (future_weights[i] + avg_value) / 2
@@ -150,16 +172,15 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
 
     if reps[-1] >= 0.9 * max_reps or weights[-1] >= 0.9 * max_weights: # sets 90% threshold
         user_level = "expert"
-        max_reps, max_weights = 150, 70
+       
     # Makes sure that these predictions are capped at a certain level
     
   
     # Next we calculate the 95% confidence intervals
     # this shows that these predictions are approximations
     # not certain values just to help users to plan workouts
-    reps_ci = 1.96 * (max(reps) - min(reps)) / max(len(reps), 1)
-    weights_ci = 1.96 * (max(weights) - min(weights)) / max(len(weights), 1)
- 
+    
+  
     return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
 
 # actual vs  prediction plot
