@@ -188,6 +188,10 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
 
 def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level="intermediate"):
     plt.figure(figsize=(12, 5))
+
+    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
+    is_bodyweight = exercise.lower() in bodyweight_exercises
+
 # Now we must create two subplots: one for reps and one for weights
     # reps plot
     plt.subplot(1, 2, 1)
@@ -208,29 +212,30 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.legend()
 
     # weight plot
-    if future_weights is not None and weights is not None and len(weights) > 0:
+    if not is_bodyweight and future_weights is not None and weights is not None:
 
     
     # Subplot 2
      plt.subplot(1, 2, 2)
      plt.plot(days, weights, label="Actual Weight", marker='o')
      plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
-     lower_weights = np.maximum.accumulate(future_weights - weights_ci)
-     upper_weights = future_weights + weights_ci
-     plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
+     if weights_ci is not None:
+      lower_weights = np.maximum.accumulate(future_weights - weights_ci)
+      upper_weights = future_weights + weights_ci
+      plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
      plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
      plt.xlabel("Days since first workout")
      plt.ylabel("Weight (Kg)")
      plt.grid(True, linestyle="--", alpha=0.6)
      plt.legend()
 
-     plt.tight_layout()
+    plt.tight_layout()
      # makes the plot fit in one page
-     plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
+    plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
      # Allows user to save plot as a png
-     plt.show()
+    plt.show()
 
-     return future_days, future_reps, future_weights, reps_ci, weights_ci
+    return future_days, future_reps, future_weights, reps_ci, weights_ci
 
     # Leaderboard displays
 
