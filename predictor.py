@@ -109,8 +109,8 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
 # Trade off ensures that if weights increase for an exercise
 # Reps will be reduced proportionally 
 # This fully reflects real training as when weights increase reps may decrease
-    growth_rate_weights = 0.04
-    growth_rate_reps = 0.02
+    growth_rate_weights = 0.05
+    growth_rate_reps = 0.01
     max_growth_step = 5
     for i in range(len(future_days)):
         future_weights[i] *= (1 + growth_rate_weights)
@@ -120,16 +120,17 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         # I came up with rules that can accomodate for this style of training
         # First if weights  are low reps will also dip
         if future_weights[i] < max_weights * 0.5:
-            future_reps[i] = max(future_reps[i] * 0.97, 1) # 5% decrease
+            future_reps[i] = max(future_reps[i] * 0.90, 1) # 10% dip
+            future_weights[i] *= 1.05 # 5% increase
         # If weights are high reps will aso increase
         if future_weights[i] > max_weights * 0.8:
-            future_reps[i] *= 1.03
+            future_reps[i] *= 1.02
         # If reps are low weights will decrease
-        if future_reps[i] < max_reps * 0.5:
-            future_weights[i] = max(future_weights[i] * 0.95, 1)
+        if future_reps[i] < max_reps * 0.4:
+            future_weights[i] = max(future_weights[i] * 0.97, 1)
         # If reps are high weights will increase
-        if future_reps[i] > max_reps * 0.8:
-            future_weights[i] *=1.03
+        if future_reps[i] > max_reps * 0.7:
+            future_weights[i] *=1.02
         # Fatigue Cycle : every 3rd prediction reps dip slightly
         if i % 3 == 0:
             future_reps[i] *= 0.97
