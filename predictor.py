@@ -103,33 +103,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
     is_bodyweight = exercise_name.lower() in bodyweight_exercises
 
-    if is_bodyweight:
-       reps_coeffs = polynomial_regression(days, reps, degree=3)
-       future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
-       residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
-       reps_ci = 1.96 * np.std(residuals)
-
-       
-
-       last_reps = reps[-1]
-       base_max_reps = 150 if user_level == "intermediate" else 200
-       max_reps = max(base_max_reps, int(last_reps * 1.2))
-       
-
-       if len(reps) > 5:
-           growth_rate = (reps[-1] / max(reps[-5], 1)) ** (1/5)
-        
-       else: 
-           growth_rate = (reps[-1] / max(reps[0], 1)) ** (1/len(reps))
-       future_reps = [last_reps * (growth_rate ** i) for i in range(1, len(future_days)+1)]
-       future_reps = np.array(future_reps, dtype=float)
-
-       future_reps = np.clip(future_reps, last_reps, max_reps)
-      
-       weights = None
-        
-       future_weights = None
-       return days, future_days, future_reps, None, reps_ci, None, user_level
+    if is_bodyweight: last_reps = reps[-1] # 🚨 Dynamic max scaling base_max_reps = 150 if user_level == "intermediate" else 200 max_reps = max(base_max_reps, int(last_reps * 1.2)) # ✅ Weighted cubic polynomial regression # Later workouts get more influence (weights ramp from 1 → 3) weights = np.linspace(1, 3, len(days)) reps_coeffs = np.polyfit(days, reps, deg=3, w=weights) # Generate polynomial predictions future_reps = np.array([np.polyval(reps_coeffs, d) for d in future_days], dtype=float) # 🚨 Bullet‑proof clamp: never below last logged reps future_reps = np.maximum(future_reps, last_reps) # ✅ Slope enforcement: ensure monotonic growth if len(reps) > 5: recent_slope = (reps[-1] - reps[-5]) / 5 else: recent_slope = reps[-1] - reps[0] for i in range(1, len(future_reps)): if future_reps[i] < future_reps[i-1]: future_reps[i] = future_reps[i-1] + recent_slope future_reps[i] = max(future_reps[i], last_reps) # 🚨 Final clamp to dynamic max future_reps = np.clip(future_reps, last_reps, max_reps) # ✅ Confidence interval based on weighted residuals residuals = reps - np.array([np.polyval(reps_coeffs, d) for d in days]) reps_ci = 1.96 * np.std(residuals) return days, future_days, future_reps, None, reps_ci, None, user_level
     else:
         reps_coeffs = polynomial_regression(days, reps, degree=3)
         future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
