@@ -122,6 +122,8 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     # Makes sure that these predictions are capped at a certain level
     
   # This ensures predictions do not exceed max levels
+    future_reps = np.minimum(future_reps, max_reps)
+    future_weights = np.minimum(future_weights, max_weights)
     # Next we calculate the 95% confidence intervals
     # this shows that these predictions are approximations
     # not certain values just to help users to plan workouts
