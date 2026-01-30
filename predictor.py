@@ -98,15 +98,10 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
        max_reps = max(400, int(last_reps * 2))
 
        future_reps = np.maximum(future_reps, last_reps)
-       if len(reps) > 5:
-           growth_rate = (reps[-1] - max(reps[-5], 1)) / 5
-        
-       else: 
-           growth_rate = reps[-1] - reps[0]
-       slope_boost = 1.5
+       poly_slopes = np.gradient(future_reps)
        for i in range(1, len(future_reps)):
            if future_reps[i] < future_reps[i-1]:
-               future_reps[i] = future_reps[i-1] + growth_rate * slope_boost
+               future_reps[i] = future_reps[i-1] + max(poly_slopes[i], 1) * 1.5
        future_reps = np.clip(future_reps, last_reps, max_reps)
       
        return days, future_days, future_reps, None, reps_ci, None, user_level
