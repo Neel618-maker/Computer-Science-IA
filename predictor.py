@@ -208,7 +208,7 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.legend()
 
     # weight plot
-    if future_weights is not None and weights_ci is not None:
+    if future_weights is not None and weights is not None and len(weights) > 0:
 
     
     # Subplot 2
