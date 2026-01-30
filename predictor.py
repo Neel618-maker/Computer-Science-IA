@@ -94,6 +94,8 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     # Ensures reps and weights stay non negative
     last_reps = reps[-1]
     last_weights = weights[-1]
+    avg_reps = np.mean(reps)
+    avg_weights = np.mean(weights)
 
    
 
@@ -135,8 +137,12 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         if i % 3 == 0:
             future_reps[i] *= 0.90
         
-    min_reps = last_reps * 0.7
-    min_weights = last_weights * 0.7
+        if  abs(future_reps[i] - future_weights[i] > 0.5 * max(future_reps[i], future_weights[i])):
+            avg_value = (future_reps[i] + future_weights[i]) / 2
+            future_reps[i] = (future_reps[i] + avg_value) / 2
+            future_weights[i] = (future_weights[i] + avg_value) / 2
+    min_reps = max(last_reps * 0.7, avg_reps * 0.5)
+    min_weights = max(last_weights * 0.7, avg_weights * 0.5)
     future_reps = np.clip(future_reps, min_reps, max_reps)
     future_weights = np.clip(future_weights, min_weights, max_weights)
   
