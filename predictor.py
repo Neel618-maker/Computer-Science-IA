@@ -74,7 +74,7 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-def predict_targets(dates, reps, weights, exercise, user_level="intermediate", degree=2):
+def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     if len(dates) < 2: # If less than 2 workouts are logged
         return None # Not enough data to make an accurate prediction
     # This function allowws dates to be converted into days since first workout
