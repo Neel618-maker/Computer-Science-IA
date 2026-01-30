@@ -83,7 +83,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     #  +6 to predict the next 5 days weekly predictions
     # Polynomial REGRESSION FOR Reps and weighrs
     # get the coeffs for reps 
-    reps_coeffs = polynomial_regression(days, reps, degree)
+    reps_coeffs = polynomial_regression(days, reps, degree=3)
     
 
     # Predictions for reps  in the future days
