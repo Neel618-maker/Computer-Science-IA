@@ -101,7 +101,7 @@ def predict_targets(dates, reps, weights=None, degree=3, user_level="intermediat
 
     return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
 
-def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise):
+def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, user_level='intermediate"'):
     plt.figure(figsize=(12, 5))
 
     # Reps plot
