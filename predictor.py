@@ -74,7 +74,7 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
+def predict_targets(dates, reps, weights, exercise, user_level="intermediate", degree=2):
     if len(dates) < 2: # If less than 2 workouts are logged
         return None # Not enough data to make an accurate prediction
     # This function allowws dates to be converted into days since first workout
@@ -100,12 +100,13 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
 
     # basic if condition if user achieves 90% of the max reps or weights
    # They can ugrade to the next level
+    
     if user_level == "intermediate":
-        max_reps, max_weights = 150, 80
+        max_reps, max_weights = 150, 70
     elif user_level == "expert":
-        max_reps, max_weights = 150, 120
+        max_reps, max_weights = 200, 90
     else: # user level is defaulted to intermediate
-        max_reps, max_weights = 150, 80
+        max_reps, max_weights = 150, 70
 # Trade off ensures that if weights increase for an exercise
 # Reps will be reduced proportionally 
 # This fully reflects real training as when weights increase reps may decrease
@@ -116,13 +117,15 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         future_weights[i] = future_weights[i] * (1 + growth_rate_weights)
         future_reps[i] = future_reps[i] * (1 + growth_rate_reps)
 
-        # If Weights are too high reps will faltten or dip
+        # If Weights are too high reps will faltten or dip and weights will dip
         if future_weights[i] > max_weights * 0.9:
-            future_reps[i] = max(future_reps[i] - 0.3 * (future_weights[i] - last_weights), last_reps)
+            future_weights[i] = max(future_weights[i] - 0.5 * (future_weights[i] - last_weights), 1)
+            future_reps[i] = future_reps[i] * 1.05
 
         # If weights are too low reps will rise faster
-        if future_weights[i] < max_weights * 0.5:
-            future_reps[i] = future_reps[i] * 1.05
+        elif future_weights[i] < max_weights * 0.5:
+            future_weights[i] = future_weights[i] * 1.05
+            future_reps[i] = max(future_reps[i] - 0.3 * (last_reps - future_reps[i]), 1)
         # Limits overly hgih growth for weights
         growth = future_weights[i] - last_weights
         if growth > max_growth_step * (i + 1):
@@ -132,7 +135,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
 
     if reps[-1] >= 0.9 * max_reps or weights[-1] >= 0.9 * max_weights: # sets 90% threshold
         user_level = "expert"
-        max_reps, max_weights = 150, 120
+        max_reps, max_weights = 150, 70
     # Makes sure that these predictions are capped at a certain level
     
   
