@@ -74,65 +74,127 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-def predict_targets(dates, reps, weights=None, degree=3, user_level="intermediate"):
-    if len(dates) < 2:
-        return None
-
+def predict_targets(dates, reps, weights=None, exercise_name="bench press", user_level="intermediate", degree=2):
+    if len(dates) < 2: # If less than 2 workouts are logged
+        return None # Not enough data to make an accurate prediction
+    # This function allowws dates to be converted into days since first workout
     days = np.array([(d - dates[0]).days for d in dates])
     future_days = np.arange(days[-1] + 1, days[-1] + 6)
+    #  +6 to predict the next 5 days weekly predictions
+    # Polynomial REGRESSION FOR Reps and weighrs
+    # get the coeffs for reps 
+    
+    
+    
+    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
+    is_bodyweight = exercise_name.lower() in bodyweight_exercises
+   
+    if is_bodyweight:
+       reps_coeffs = polynomial_regression(days, reps, degree=3)
+       future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+       residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
+       reps_ci = 1.96 * np.std(residuals)
+       reps_ci = max(reps_ci, 2)
+       last_reps = reps[-1]
+       max_reps = max(400, int(last_reps * 2))
 
-    # Polynomial fit for reps
-    reps_coeffs = polynomial_regression(days, reps, degree=degree)
-    future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
-    residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
-    reps_ci = max(1.96 * np.std(residuals), 2)  # enforce minimum CI
-    last_reps = reps[-1]
-    future_reps = np.clip(future_reps, last_reps, last_reps * 2)
+       future_reps = np.maximum(future_reps, last_reps)
+       poly_slopes = np.gradient(future_reps)
+       for i in range(1, len(future_reps)):
+           if future_reps[i] < future_reps[i-1]:
+               future_reps[i] = future_reps[i-1] + max(poly_slopes[i], 1) * 1.5
+       future_reps = np.clip(future_reps, last_reps, max_reps)
+      
+       return days, future_days, future_reps, None, reps_ci, None, user_level
+   
 
-    # Polynomial fit for weights (if available)
-    future_weights, weights_ci = None, None
-    if weights is not None and len(weights) > 1:
+    # basic if condition if user achieves 90% of the max reps or weights
+   # They can ugrade to the next level
+    
+     
+
+  
+       
+    else:
+        reps_coeffs = polynomial_regression(days, reps, degree=3)
+        future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+      
+        reps_residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
+        reps_ci = 1.96 * np.std(reps_residuals)
+
         weights_coeffs = polynomial_regression(days, weights, degree=2)
         future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
-        weights_residuals = weights - np.array([predict(weights_coeffs, d) for d in days])
-        weights_ci = max(1.96 * np.std(weights_residuals), 2)
-        last_weights = weights[-1]
-        future_weights = np.clip(future_weights, last_weights, last_weights * 2)
 
+        weights_residuals = weights - np.array([predict(weights_coeffs, d) for d in days], dtype=float)
+        weights_ci = 1.96 * np.std(weights_residuals)
+        
+        last_reps, last_weights = reps[-1], weights[-1]
+        max_reps = max(400, int(last_reps * 2))
+        max_weights = max(200, int(last_weights * 2))
+
+        future_reps = np.clip(future_reps, last_reps, max_reps)
+        future_weights = np.clip(future_weights, last_weights, max_weights)
+
+  
     return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
 
-def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, user_level="intermediate"):
+# actual vs  prediction plot
+
+def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level="intermediate"):
     plt.figure(figsize=(12, 5))
 
-    # Reps plot
+    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
+    is_bodyweight = exercise.lower() in bodyweight_exercises
+
+# Now we must create two subplots: one for reps and one for weights
+    # reps plot
     plt.subplot(1, 2, 1)
-    plt.plot(days, reps, 'o-', label="Actual Reps")
-    plt.plot(future_days, future_reps, 'x--', label="Predicted Reps")
-    plt.fill_between(future_days, future_reps - reps_ci, future_reps + reps_ci,
-                     color='gray', alpha=0.3, label="95% CI")
-    plt.title(f"{exercise.capitalize()} Reps Prediction"({user_level.capitalize()}))
+    # subplot 1 
+    plt.plot(days, reps, label = "Actual Reps", marker='o') 
+    # actual reps will be shown as dots
+    plt.plot(future_days, future_reps, label="predicted Reps", linestyle='--', marker='x')
+    # predicted reps will have a dashed linestyle and be shown as x marks
+    plt.fill_between(future_days, [r-reps_ci for r in future_reps], [r+reps_ci for r in future_reps], color='gray', alpha=0.2, label="95% CI")
+    # mkes the confidence interval shaded gray for the graph
+    plt.title(f"Reps Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
+    # Title of the graph for specific exercise including user level
     plt.xlabel("Days since first workout")
+    # Shows x axis label as days since first workout
     plt.ylabel("Reps")
+    # Shows y axis label as reps
+    plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
-    plt.grid(True)
 
-    # Weights plot (if available)
-    if future_weights is not None and weights is not None:
-        plt.subplot(1, 2, 2)
-        plt.plot(days, weights, 'o-', label="Actual Weights")
-        plt.plot(future_days, future_weights, 'x--', label="Predicted Weights")
-        plt.fill_between(future_days, future_weights - weights_ci, future_weights + weights_ci,
-                         color='red', alpha=0.3, label="95% CI")
-        plt.title(f"{exercise.capitalize()} Weight Prediction")
-        plt.xlabel("Days since first workout")
-        plt.ylabel("Weight (kg)")
-        plt.legend()
-        plt.grid(True)
+    # weight plot
+    if not is_bodyweight and future_weights is not None and weights is not None:
 
+    
+    # Subplot 2
+     plt.subplot(1, 2, 2)
+     plt.plot(days, weights, label="Actual Weight", marker='o')
+     plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
+     
+     if weights_ci is not None:
+        lower_weights = np.maximum.accumulate(future_weights - weights_ci)
+        upper_weights = future_weights + weights_ci
+     
+     plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
+     plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
+     plt.xlabel("Days since first workout")
+     plt.ylabel("Weight (Kg)")
+     plt.grid(True, linestyle="--", alpha=0.6)
+     plt.legend()
+
+    
     plt.tight_layout()
+     # makes the plot fit in one page
+    plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
+     # Allows user to save plot as a png
     plt.show()
 
+    return future_days, future_reps, future_weights, reps_ci, weights_ci
 
+    # Leaderboard displays
 
 def show_leaderboard(student_id=None, exercise_filter=None):
     conn = sqlite3.connect("fitness.db") # connect to the database 
