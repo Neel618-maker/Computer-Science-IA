@@ -110,7 +110,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
 # Reps will be reduced proportionally 
 # This fully reflects real training as when weights increase reps may decrease
     growth_rate_weights = 0.04
-    growth_rate_reps = 0.01
+    growth_rate_reps = 0.02
     max_growth_step = 5
     for i in range(len(future_days)):
         future_weights[i] *= (1 + growth_rate_weights)
@@ -120,7 +120,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         # I came up with rules that can accomodate for this style of training
         # First if weights  are low reps will also dip
         if future_weights[i] < max_weights * 0.5:
-            future_reps[i] = max(future_reps[i] * 0.95, 1) # 5% decrease
+            future_reps[i] = max(future_reps[i] * 0.97, 1) # 5% decrease
         # If weights are high reps will aso increase
         if future_weights[i] > max_weights * 0.8:
             future_reps[i] *= 1.03
@@ -139,7 +139,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
             future_weights[i] = last_weights + max_growth_step * (i + 1)
     min_reps = last_reps * 0.9
     min_weights = last_weights * 0.9
-    future_reps = np.clip(future_weights, min_reps, max_reps)
+    future_reps = np.clip(future_reps, min_reps, max_reps)
     future_weights = np.clip(future_weights, min_weights, max_weights)
   
    
