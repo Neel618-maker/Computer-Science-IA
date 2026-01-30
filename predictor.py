@@ -83,8 +83,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     #  +6 to predict the next 5 days weekly predictions
     # Polynomial REGRESSION FOR Reps and weighrs
     # get the coeffs for reps 
-    days_norm = days / max(days)
-    future_days_norm = future_days / max(days)
+    
     
     
     
@@ -105,29 +104,28 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     is_bodyweight = exercise_name.lower() in bodyweight_exercises
 
     if is_bodyweight:
+       reps_coeffs = polynomial_regression(days, reps, degree=3)
+       future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+
+       residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
+       reps_ci = 1.96 * np.std(residuals)
+
        last_reps = reps[-1]
-       avg_reps = np.mean(reps)
-
-       y = np.array(reps)
-       y_shift = y - min(y) + 1
-       log_y = np.log(y_shift)
-       beta, alpha = np.polyfit(days_norm, log_y, 1)
-       future_reps = np.exp(alpha + beta * future_days_norm) + min(y) - 1
        future_reps = np.maximum(future_reps, last_reps)
-
        for i in range(1, len(future_reps)):
            if future_reps[i] < future_reps[i-1]:
                future_reps[i] = future_reps[i-1] * 1.02
-       reps_ci = 0.05 * np.array(future_reps)
+      
        weights = None
         
        future_weights = None
        return days, future_days, future_reps, None, reps_ci, None, user_level
     else:
-        reps_coeffs = polynomial_regression(days_norm, reps, degree=3)
-        future_reps = np.array([predict(reps_coeffs, d) for d in future_days_norm], dtype=float)
-        weights_coeffs = polynomial_regression(days_norm, weights, degree=2)
-        future_weights = np.array([predict(weights_coeffs, d) for d in future_days_norm], dtype=float)
+        reps_coeffs = polynomial_regression(days, reps, degree=3)
+        future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+      
+        weights_coeffs = polynomial_regression(days, weights, degree=2)
+        future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
         
         last_reps = reps[-1]
         avg_reps = np.mean(reps)
