@@ -74,7 +74,7 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-def predict_targets(dates, reps, weights=None, degree=3):
+def predict_targets(dates, reps, weights=None, degree=3, user_level="intermediate"):
     if len(dates) < 2:
         return None
 
@@ -99,7 +99,7 @@ def predict_targets(dates, reps, weights=None, degree=3):
         last_weights = weights[-1]
         future_weights = np.clip(future_weights, last_weights, last_weights * 2)
 
-    return days, future_days, future_reps, future_weights, reps_ci, weights_ci
+    return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
 
 def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise):
     plt.figure(figsize=(12, 5))
