@@ -116,8 +116,8 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
         future_weights = None
         return days, future_days, future_reps, None, reps_ci, None, user_level
     else:
-        weights_coeffs = polynomial_regression(days, weights, degree)
-        future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
+        weights_coeffs = polynomial_regression(days_norm, weights, degree)
+        future_weights = np.array([predict(weights_coeffs, d) for d in future_days_norm], dtype=float)
         
         last_reps = reps[-1]
         avg_reps = np.mean(reps)
