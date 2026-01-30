@@ -207,27 +207,29 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.legend()
 
     # weight plot
+    if future_weights is not None:
 
-    plt.subplot(1, 2, 2)
+    
     # Subplot 2
-    plt.plot(days, weights, label="Actual Weight", marker='o')
-    plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
-    lower_weights = np.maximum.accumulate(future_weights - weights_ci)
-    upper_weights = future_weights + weights_ci
-    plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
-    plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
-    plt.xlabel("Days since first workout")
-    plt.ylabel("Weight (Kg)")
-    plt.grid(True, linestyle="--", alpha=0.6)
-    plt.legend()
+     plt.subplot(1, 2, 2)
+     plt.plot(days, weights, label="Actual Weight", marker='o')
+     plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
+     lower_weights = np.maximum.accumulate(future_weights - weights_ci)
+     upper_weights = future_weights + weights_ci
+     plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
+     plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
+     plt.xlabel("Days since first workout")
+     plt.ylabel("Weight (Kg)")
+     plt.grid(True, linestyle="--", alpha=0.6)
+     plt.legend()
 
-    plt.tight_layout()
-    # makes the plot fit in one page
-    plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
-    # Allows user to save plot as a png
-    plt.show()
+     plt.tight_layout()
+     # makes the plot fit in one page
+     plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
+     # Allows user to save plot as a png
+     plt.show()
 
-    return future_days, future_reps, future_weights, reps_ci, weights_ci
+     return future_days, future_reps, future_weights, reps_ci, weights_ci
 
     # Leaderboard displays
 
