@@ -5,180 +5,266 @@ from datetime import datetime
 import schedule
 import time
 
-# --- HELPER: BIOLOGY MATH ---
-def calculate_e1rm(weight, reps):
-    """
-    Calculates Estimated 1 Rep Max (Strength Score).
-    Formula: Weight * (1 + Reps/30)
-    This allows us to compare 100kg x 1 vs 85kg x 5 fairly.
-    """
-    if reps < 1: return 0
-    if reps == 1: return weight
-    return weight * (1 + (reps / 30.0))
 
-# --- DATABASE HANDLER ---
+# Get workout history for a student and exercise
 def get_workout_data(student_id, exercise):
     conn = sqlite3.connect("fitness.db")
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT datetime, reps, weight 
-        FROM user_workouts 
-        WHERE student_id = ? AND exercise = ? 
-        ORDER BY datetime ASC 
-    """, (student_id, exercise.lower()))
+    cursor.execute(" SELECT datetime, reps, weight FROM user_workouts WHERE student_id = ? AND exercise = ? ORDER BY datetime ASC ", (student_id, exercise.lower()))
     rows = cursor.fetchall()
     conn.close()
 
     if not rows:
-        return [], [], [], []
+        return [], [], []
 
     dates = [datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") for row in rows]
-    reps = np.array([row[1] for row in rows])
-    weights = np.array([row[2] for row in rows])
+    reps =  [row[1] for row in rows]
+    weights = [row[2] for row in rows]
+    return dates, reps, weights
+   # Polynomial Regression Algorithm
+def polynomial_regression(x_values, y_values, degree=2):
+    # First step is to create the design matrix where each row 
+    # corresponds to a power of x (days since first workout)
+    # works out exact numbers for the curve to match the data closely
+    X = [[x**i for i in range(degree+1)]for x in x_values]
+    XT = list(map(list, zip(*X))) # swap rows and columns in matrix X
+    XT_X = [[sum(a*b for a, b in zip(row, col))for col in zip(*X)] for row in XT]
+    # The code above just multiplies matrix XT with matrix X
+    XT_y = [sum(a*b for a, b in zip(row, y_values)) for row in XT]
+    # The code above multiplies matrix XT with vector y_values
+    coeffs = gaussian_elimination(XT_X, XT_y)
+    return coeffs
 
-    # Calculate Strength Score (e1RM) for every workout
-    e1rms = []
-    for r, w in zip(reps, weights):
-        # If it's a bodyweight exercise with 0 weight, track reps only
-        if w == 0 or w is None:
-            e1rms.append(r)
-        else:
-            e1rms.append(calculate_e1rm(w, r))
+# Solve equations using the Gaussian elimination model
+# Performs forward elimination and back substitution 
+# Solves system of equations
 
-    return dates, reps, weights, np.array(e1rms)
+def gaussian_elimination(A, b):
+    n = len(A)
+    # Forward elimination to reduce matrix to upper triangular form
+    for i in range(n):
+        pivot = A[i][i] # diagonal element used to eliminate below
+        # Scale the pivot row so pivot becomes 1
+        for J in range(i, n): 
+            A[i][J] /= pivot
+        b[i] /=pivot
+            # Eliminate the current variable from all rows below
+        for k in range (i+1, n):
+            factor = A[k][i]
+            for J in range(i, n):
+                A[k][J] -= factor * A[i][J]
+            b[k] -= factor * b[i]
+    # Back substitutiion to solvefor each coefficient
+    # Starts from the bottom row and works upwards
+    x = [0]*n
+    for i in range(n-1, -1, -1):
+        # Each row now has fewer variables to solve for
+        x[i] = b[i] - sum(A[i][J] * x[J] for J in range (i+1, n))
+    return x
 
-# --- REALISTIC PREDICTION ENGINE ---
-def predict_realistic(dates, e1rms, exercise_name="bench press", user_level="intermediate"):
-    if len(dates) < 2:
-        return None 
+# Predicts the new values using polynomial coefficients
+# Given the coefficients and x value 
+# Calculates y = a0 + a1*x + a2*x^2 + ...
+def predict(coeffs, x):
+    return sum(coeffs[i] * (x**i) for i in range(len(coeffs)))
 
-    # 1. Convert dates to "Days Since Start"
+
+
+
+
+# predict future reps and weight using Polynomial regression and user level implementation
+# Configures user level based on performance
+def predict_targets(dates, reps, weights=None, exercise_name="bench press", user_level="intermediate", degree=2):
+    if len(dates) < 2: # If less than 2 workouts are logged
+        return None # Not enough data to make an accurate prediction
+    # This function allowws dates to be converted into days since first workout
     days = np.array([(d - dates[0]).days for d in dates])
+    future_days = np.arange(days[-1] + 1, days[-1] + 6)
+    #  +6 to predict the next 5 days weekly predictions
+    # Polynomial REGRESSION FOR Reps and weighrs
+    # get the coeffs for reps 
     
-    # 2. Define Future (Next 7 Days)
-    last_day = days[-1]
-    future_days = np.arange(last_day + 1, last_day + 8)
+    
+    
+    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
+    is_bodyweight = exercise_name.lower() in bodyweight_exercises
+   
+    if is_bodyweight:
+       reps_coeffs = polynomial_regression(days, reps, degree=3)
+       future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+       residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
+       reps_ci = 1.96 * np.std(residuals)
+       reps_ci = max(reps_ci, 2)
+       last_reps = reps[-1]
+       max_reps = max(400, int(last_reps * 2))
 
-    # 3. LINEAR REGRESSION (Replacing Gaussian Elimination)
-    # Degree 1 = Straight Line. This is safer for fitness predictions.
-    slope, intercept = np.polyfit(days, e1rms, 1)
-    
-    # Calculate the raw prediction line
-    future_strength = slope * future_days + intercept
+       future_reps = np.maximum(future_reps, last_reps)
+       poly_slopes = np.gradient(future_reps)
+       for i in range(1, len(future_reps)):
+           if future_reps[i] < future_reps[i-1]:
+               future_reps[i] = future_reps[i-1] + max(poly_slopes[i], 1) * 1.5
+       future_reps = np.clip(future_reps, last_reps, max_reps)
+      
+       return days, future_days, future_reps, None, reps_ci, None, user_level
+   
 
-    # 4. REALISM CLAMP (The "Safety Governor")
-    # Even if the math predicts huge gains, we cap growth at 2.5% per week
-    current_strength = e1rms[-1]
-    max_safe_strength = current_strength * 1.025 # Max 2.5% gain
+    # basic if condition if user achieves 90% of the max reps or weights
+   # They can ugrade to the next level
     
-    # Apply the clamp
-    if slope > 0:
-        # If improving, cap at safe limit
-        future_strength = np.clip(future_strength, current_strength, max_safe_strength)
+     
+
+  
+       
     else:
-        # If regressing, don't let it crash to zero (assume 5% floor variance)
-        future_strength = np.maximum(future_strength, current_strength * 0.95)
+        reps_coeffs = polynomial_regression(days, reps, degree=3)
+        future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+      
+        reps_residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
+        reps_ci = 1.96 * np.std(reps_residuals)
 
-    # 5. CONVERT BACK TO REPS/WEIGHT ADVICE
-    # We convert the abstract "Strength Score" back into a weight recommendation for 8 reps
-    suggested_weights = []
-    is_bodyweight = exercise_name.lower() in ["pushups", "situps", "pullups", "plank", "lunge"]
-    
-    for s in future_strength:
-        if is_bodyweight:
-            # For bodyweight, the 'strength' is just the rep count
-            suggested_weights.append(int(s))
-        else:
-            # Reverse Formula: Weight = Strength / (1 + 8/30)
-            # We suggest 8 reps as a standard hypertrophy range
-            w_for_8_reps = s / (1 + (8 / 30.0))
-            suggested_weights.append(round(w_for_8_reps, 1))
+        weights_coeffs = polynomial_regression(days, weights, degree=2)
+        future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
 
-    return days, future_days, future_strength, suggested_weights
+        weights_residuals = weights - np.array([predict(weights_coeffs, d) for d in days], dtype=float)
+        weights_ci = 1.96 * np.std(weights_residuals)
+        
+        last_reps, last_weights = reps[-1], weights[-1]
+        max_reps = max(400, int(last_reps * 2))
+        max_weights = max(200, int(last_weights * 2))
 
-# --- PLOTTING ---
-def plot_predictions(days, e1rms, future_days, future_strength, exercise, student_id):
-    plt.figure(figsize=(10, 6))
-    
-    # Plot History
-    plt.scatter(days, e1rms, color='blue', label='Actual History')
-    
-    # Plot Prediction
-    plt.plot(future_days, future_strength, color='green', linestyle='--', marker='x', label='Projected Safe Growth')
-    
-    # Formatting
-    plt.title(f"Progress Projection: {exercise.capitalize()}")
-    plt.xlabel("Days Since First Workout")
-    plt.ylabel("Strength Index (Est. 1 Rep Max or Reps)")
+        future_reps = np.clip(future_reps, last_reps, max_reps)
+        future_weights = np.clip(future_weights, last_weights, max_weights)
+
+  
+    return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
+
+# actual vs  prediction plot
+
+def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level="intermediate"):
+    plt.figure(figsize=(12, 5))
+
+    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
+    is_bodyweight = exercise.lower() in bodyweight_exercises
+
+# Now we must create two subplots: one for reps and one for weights
+    # reps plot
+    plt.subplot(1, 2, 1)
+    # subplot 1 
+    plt.plot(days, reps, label = "Actual Reps", marker='o') 
+    # actual reps will be shown as dots
+    plt.plot(future_days, future_reps, label="predicted Reps", linestyle='--', marker='x')
+    # predicted reps will have a dashed linestyle and be shown as x marks
+    plt.fill_between(future_days, [r-reps_ci for r in future_reps], [r+reps_ci for r in future_reps], color='gray', alpha=0.2, label="95% CI")
+    # mkes the confidence interval shaded gray for the graph
+    plt.title(f"Reps Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
+    # Title of the graph for specific exercise including user level
+    plt.xlabel("Days since first workout")
+    # Shows x axis label as days since first workout
+    plt.ylabel("Reps")
+    # Shows y axis label as reps
+    plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
-    plt.grid(True, linestyle="--", alpha=0.5)
-    
-    # Save and Show
-    filename = f"pred_{student_id}_{exercise}.png"
-    plt.savefig(filename)
-    plt.show()
-    print(f"Graph saved as {filename}")
 
-# --- LEADERBOARD (Kept mostly the same) ---
-def show_leaderboard():
-    conn = sqlite3.connect("fitness.db")
+    # weight plot
+    if not is_bodyweight and future_weights is not None and weights is not None:
+
+    
+    # Subplot 2
+     plt.subplot(1, 2, 2)
+     plt.plot(days, weights, label="Actual Weight", marker='o')
+     plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
+     
+     if weights_ci is not None:
+        lower_weights = np.maximum.accumulate(future_weights - weights_ci)
+        upper_weights = future_weights + weights_ci
+     
+     plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
+     plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
+     plt.xlabel("Days since first workout")
+     plt.ylabel("Weight (Kg)")
+     plt.grid(True, linestyle="--", alpha=0.6)
+     plt.legend()
+
+    
+    plt.tight_layout()
+     # makes the plot fit in one page
+    plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
+     # Allows user to save plot as a png
+    plt.show()
+
+    return future_days, future_reps, future_weights, reps_ci, weights_ci
+
+    # Leaderboard displays
+
+def show_leaderboard(student_id=None, exercise_filter=None):
+    conn = sqlite3.connect("fitness.db") # connect to the database 
     cursor = conn.cursor()
-    # Calculates improvement based on max strength achieved vs initial strength
+
     query = """
-        SELECT u.name, w.exercise, MIN(w.datetime), MAX(w.datetime), MIN(w.reps), MAX(w.reps), MIN(w.weight), MAX(w.weight)
+        SELECT u.student_id, u.name, w.exercise, MIN(w.datetime), MAX(w.datetime), MIN(w.reps), MAX(w.reps)
         FROM user_workouts w
         JOIN users u on u.student_id = w.student_id
-        GROUP BY u.student_id, w.exercise
     """
-    cursor.execute(query)
+    # query to collect user's exercise history from database for leaderboard calculations
+    filters = []
+    params = []
+
+    if student_id is not None:
+        filters.append("u.student_id = ?") # allows user to filter by student_id
+        params.append(student_id) # stores the student id value
+    if exercise_filter is not None: 
+        filters.append("w.exercise = ?") # allows user to filter by exercise
+        params.append(exercise_filter.lower()) # stores exercise name in lower case
+# If any more filters exist join them to the query using WHERE and AND
+    if filters:
+        query += " WHERE " + " AND ".join(filters)
+ # groups results by student and exercise to calculate the improvement per exercise
+    query += " GROUP BY u.student_id, w.exercise"
+# execute the querry with the parameters and fetch all matching rows
+    cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
     conn.close()
-    
+
     leaderboard = []
-    for name, exercise, start, end, min_r, max_r, min_w, max_w in rows:
-        try:
-            # Calculate simple strength delta
-            start_str = calculate_e1rm(min_w, min_r)
-            end_str = calculate_e1rm(max_w, max_r)
-            
-            # Improvement %
-            if start_str > 0:
-                imp = ((end_str - start_str) / start_str) * 100
-                leaderboard.append((name, exercise, round(imp, 1)))
-        except:
-            continue
-            
-    leaderboard.sort(key=lambda x: x[2], reverse=True)
-    return leaderboard[:10]
+ # Process each row to calculate improvement rate
+    for student_id, name, exercise, start_date, end_date, min_reps, max_reps in rows:
+      try:
+       # Convert dates into datetime 
+       start = datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
+       end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
+      # Calculate days between first and latest workout logged (also avoids division by 0)
+       days = max((end - start).days, 1)
+      # Improvement rate calculation
+       rate = (max_reps - min_reps) / days
+      # Add updated student info and improvement rate for the exercise on the leaderboard
+       leaderboard.append((student_id, name, exercise, round(rate, 2)))
+      except ValueError as e:
+    # Skips row if there's an error in date conversion
+          print(f"Skipping row due to error: {e}")
+          continue
+   # sorts leaderboard with highest improvement rate being first
+    leaderboard.sort(key=lambda x: x[3], reverse=True) 
 
-# --- MAIN EXECUTION BLOCK ---
-if __name__ == "__main__":
-    # Example usage (simulating a run)
-    print("--- Fitness Tracker Prediction ---")
+    return leaderboard[: 10]
     
-    # 1. Mock Data (Replace with inputs in real app)
-    s_id = 123
-    ex_name = "bench press"
+# Daily leaderboard sanpshot
     
-    # Note: In a real app, you'd ensure the DB has data first.
-    # For this demo, we assume the DB handles the inputs.
-    try:
-        dates, reps, weights, e1rms = get_workout_data(s_id, ex_name)
-        
-        if len(dates) > 1:
-            days, f_days, f_str, advice = predict_realistic(dates, e1rms, ex_name)
-            
-            print(f"\nPrediction for {ex_name}:")
-            for i, day in enumerate(f_days):
-                print(f"  Day {day}: Target Strength {f_str[i]:.1f} -> Try {advice[i]} kg for 8 reps")
-            
-            plot_predictions(days, e1rms, f_days, f_str, ex_name, s_id)
-        else:
-            print("Not enough data to predict yet. Log at least 2 workouts!")
-            
-    except Exception as e:
-        print(f"Error (likely no DB found): {e}")
+def daily_leaderboard():
+        print("daily Leaderboard snapshot")
+        # Shows the leaderboard
+        print(show_leaderboard())
+        print(show_leaderboard(exercise_filter="pushups")) # example exercise
+        print(show_leaderboard(student_id=123456)) # example student id
 
+        schedule.every().day.at("08:00").do(daily_leaderboard)
+
+        if __name__ == "__main__":
+            print("Leaderboard scheduler started. Waiting for next run...")
+            while True:
+                schedule.run_pending()
+                time.sleep(60) # waits a minute before checking again
+
+              
 
      
 
