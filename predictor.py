@@ -96,7 +96,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     last_weights = weights[-1]
 
     future_reps = np.maximum(future_reps, last_reps)
-    future_reps = np.maximum(future_weights, last_weights)
+    future_weights = np.maximum(future_weights, last_weights)
 # Trade off ensures that if weights increase for an exercise
 # Reps will be reduced proportionally 
 # This fully reflects real training as when weights increase reps may decrease
@@ -106,7 +106,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
 # This is for the opposite scenario of reps increasing while weights decrease
     for i in range(len(future_days)):
         if future_reps[i] > last_reps:
-            future_weights[i] = max(future_weights[i] - future_reps[i] - last_reps) * 0.2, 1
+            future_weights[i] = max(future_weights[i] - (future_reps[i] - last_reps) * 0.2, 1)
    # basic if condition if user achieves 90% of the max reps or weights
    # They can ugrade to the next level
     if user_level == "intermediate":
