@@ -110,13 +110,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     is_bodyweight = exercise_name.lower() in bodyweight_exercises
 
     if is_bodyweight:
-        for i in range(len(future_days)):
-            if i % 3 == 0:
-                future_reps[i] *=0.90
-            if future_reps[i] > max_reps * 0.7:
-                future_reps[i] *= 0.95
-            if future_reps[i] < max_reps * 0.4:
-                future_reps[i] *= 1.03
+        
         min_reps = max(last_reps * 0.7, avg_reps * 0.5)
         future_reps = np.clip(future_reps, min_reps, max_reps)
         weights = None
