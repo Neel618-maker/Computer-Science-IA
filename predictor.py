@@ -85,16 +85,11 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     # get the coeffs for reps 
     days_norm = days / max(days)
     future_days_norm = future_days / max(days)
-    reps_coeffs = polynomial_regression(days_norm, reps, degree=3)
     
-
-    # Predictions for reps  in the future days
-    future_reps = np.array([predict(reps_coeffs, d) for d in future_days_norm], dtype=float)
     
     
    
-    residuals = reps - np.array([predict(reps_coeffs, d) for d in days_norm])
-    reps_ci = 1.96 * np.std(residuals)
+    
    
 
     # basic if condition if user achieves 90% of the max reps or weights
@@ -111,16 +106,26 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
 
     if is_bodyweight:
        last_reps = reps[-1]
+       avg_reps = np.mean(reps)
+
+       y = np.array(reps)
+       y_shift = y - min(y) + 1
+       log_y = np.log(y_shift)
+       beta, alpha = np.polyfit(days_norm, log_y, 1)
+       future_reps = np.exp(alpha + beta * future_days_norm) + min(y) - 1
        future_reps = np.maximum(future_reps, last_reps)
 
        for i in range(1, len(future_reps)):
            if future_reps[i] < future_reps[i-1]:
                future_reps[i] = future_reps[i-1] * 1.02
+       reps_ci = 0.05 * np.array(future_reps)
        weights = None
         
        future_weights = None
        return days, future_days, future_reps, None, reps_ci, None, user_level
     else:
+        reps_coeffs = polynomial_regression(days_norm, reps, degree=3)
+        future_reps = np.array([predict(reps_coeffs, d) for d in future_days_norm], dtype=float)
         weights_coeffs = polynomial_regression(days_norm, weights, degree=2)
         future_weights = np.array([predict(weights_coeffs, d) for d in future_days_norm], dtype=float)
         
