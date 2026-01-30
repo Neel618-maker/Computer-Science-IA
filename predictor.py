@@ -116,7 +116,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
        future_reps = np.maximum(future_reps, last_reps)
        for i in range(1, len(future_reps)):
            if future_reps[i] < future_reps[i-1]:
-               future_reps[i] = future_reps[i-1] * 1.02
+               future_reps[i] = future_reps[i-1] * 1.05
       
        weights = None
         
@@ -128,7 +128,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
       
         residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
         reps_ci = 1.96 * np.std(residuals)
-        
+
         weights_coeffs = polynomial_regression(days, weights, degree=2)
         future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
         
