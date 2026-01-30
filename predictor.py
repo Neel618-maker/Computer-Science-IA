@@ -74,68 +74,131 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-
-
-def predict_targets(dates, reps, weights, is_bodyweight=True, user_level="intermediate"):
-    # Convert dates to days since first workout
+def predict_targets(dates, reps, weights=None, exercise_name="bench press", user_level="intermediate", degree=2):
+    if len(dates) < 2: # If less than 2 workouts are logged
+        return None # Not enough data to make an accurate prediction
+    # This function allowws dates to be converted into days since first workout
     days = np.array([(d - dates[0]).days for d in dates])
-    future_days = np.arange(days[-1] + 1, days[-1] + 31)  # next 30 days
+    future_days = np.arange(days[-1] + 1, days[-1] + 6)
+    #  +6 to predict the next 5 days weekly predictions
+    # Polynomial REGRESSION FOR Reps and weighrs
+    # get the coeffs for reps 
+    
+    
+    
+    
+   
+    
+   
 
-    # --- BODYWEIGHT BRANCH (pushups, situps, pullups) ---
+    # basic if condition if user achieves 90% of the max reps or weights
+   # They can ugrade to the next level
+    
+    if user_level == "intermediate":
+        max_reps, max_weights = 150, 70
+    elif user_level == "expert":
+        max_reps, max_weights = 200, 90
+    else: # user level is defaulted to intermediate
+        max_reps, max_weights = 150, 70
+    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
+    is_bodyweight = exercise_name.lower() in bodyweight_exercises
+
     if is_bodyweight:
-        last_reps = reps[-1]
-        base_max_reps = 400 if user_level == "intermediate" else 600
-        max_reps = max(base_max_reps, int(last_reps * 2))
+       reps_coeffs = polynomial_regression(days, reps, degree=3)
+       future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+       residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
+       reps_ci = 1.96 * np.std(residuals)
 
-        # Weighted cubic polynomial regression
-        weights_poly = np.linspace(1, 3, len(days))
-        reps_coeffs = np.polyfit(days, reps, deg=3, w=weights_poly)
+       
 
-        # Polynomial predictions
-        future_reps = np.array([np.polyval(reps_coeffs, d) for d in future_days], dtype=float)
+       last_reps = reps[-1]
+       base_max_reps = 150 if user_level == "intermediate" else 200
+       max_reps = max(base_max_reps, int(last_reps * 1.2))
+       
 
-        # Clamp + slope enforcement
-        future_reps = np.maximum(future_reps, last_reps)
-        if len(reps) > 5:
-            recent_slope = (reps[-1] - reps[-5]) / 5
-        else:
-            recent_slope = reps[-1] - reps[0]
-        slope_boost = 1.5  # multiplier to make curve surge
-        for i in range(1, len(future_reps)):
-            if future_reps[i] < future_reps[i-1]:
-                future_reps[i] = future_reps[i-1] + recent_slope * slope_boost
-        future_reps = np.clip(future_reps, last_reps, max_reps)
+       if len(reps) > 5:
+           growth_rate = (reps[-1] / max(reps[-5], 1)) ** (1/5)
+        
+       else: 
+           growth_rate = (reps[-1] / max(reps[0], 1)) ** (1/len(reps))
+       future_reps = [last_reps * (growth_rate ** i) for i in range(1, len(future_days)+1)]
+       future_reps = np.array(future_reps, dtype=float)
 
-        # Confidence interval
-        residuals = reps - np.array([np.polyval(reps_coeffs, d) for d in days])
+       future_reps = np.clip(future_reps, last_reps, max_reps)
+      
+       weights = None
+        
+       future_weights = None
+       return days, future_days, future_reps, None, reps_ci, None, user_level
+    else:
+        reps_coeffs = polynomial_regression(days, reps, degree=3)
+        future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+      
+        residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
         reps_ci = 1.96 * np.std(residuals)
 
-        return days, future_days, future_reps, None, reps_ci, None, user_level
+        weights_coeffs = polynomial_regression(days, weights, degree=2)
+        future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
+        
+        last_reps = reps[-1]
+        avg_reps = np.mean(reps)
+        last_weights = weights[-1]
+        avg_weights = np.mean(weights)
+        weights_ci = 1.96 * (max(weights) - min(weights)) / max(len(weights), 1)
 
-    # --- WEIGHTED BRANCH (bench press, squat, deadlift) ---
-    else:
-        last_reps, last_weights = reps[-1], weights[-1]
-        max_reps = max(400, int(last_reps * 2))
-        max_weights = max(200, int(last_weights * 2))
 
-        # Polynomial regression
-        reps_coeffs = np.polyfit(days, reps, deg=2)
-        weights_coeffs = np.polyfit(days, weights, deg=2)
+# Trade off ensures that if weights increase for an exercise
+# Reps will be reduced proportionally 
+# This fully reflects real training as when weights increase reps may decrease
+   
+    for i in range(len(future_days)):
+        
 
-        future_reps = np.array([np.polyval(reps_coeffs, d) for d in future_days], dtype=float)
-        future_weights = np.array([np.polyval(weights_coeffs, d) for d in future_days], dtype=float)
+        # There should be atrade off when it comes to predictions
+        # I came up with rules that can accomodate for this style of training
+        # First if weights  are low reps will also dip
+        if future_weights[i] < max_weights * 0.5:
+            future_reps[i] *= 0.85
+            future_weights[i] *= 1.08
+        # If weights are high reps will aso increase
+        if future_weights[i] > max_weights * 0.7:
+            future_reps[i] *= 1.05
+            future_weights[i] *= 0.97
+        # If reps are low weights will decrease
+        if future_reps[i] < max_reps * 0.4:
+            future_weights[i] *= 1.06
+            future_reps[i] *= 0.95
+        # If reps are high weights will increase
+        if future_reps[i] > max_reps * 0.7:
+            future_weights[i] *= 1.06
+            future_reps[i] *= 0.95
+        # Fatigue Cycle : every 3rd prediction reps dip slightly
+        if i % 3 == 0:
+            future_reps[i] *= 0.90
+        
+        if  abs(future_reps[i] - future_weights[i]) > 0.5 * max(future_reps[i], future_weights[i]):
+            avg_value = (future_reps[i] + future_weights[i]) / 2
+            future_reps[i] = (future_reps[i] + avg_value) / 2
+            future_weights[i] = (future_weights[i] + avg_value) / 2
+    min_reps = max(last_reps * 0.7, avg_reps * 0.5)
+    min_weights = max(last_weights * 0.7, avg_weights * 0.5)
+    future_reps = np.clip(future_reps, min_reps, max_reps)
+    future_weights = np.clip(future_weights, min_weights, max_weights)
+  
+   
 
-        # Clamp predictions
-        future_reps = np.clip(future_reps, last_reps, max_reps)
-        future_weights = np.clip(future_weights, last_weights, max_weights)
-
-        # Confidence intervals
-        reps_residuals = reps - np.array([np.polyval(reps_coeffs, d) for d in days])
-        weights_residuals = weights - np.array([np.polyval(weights_coeffs, d) for d in days])
-        reps_ci = 1.96 * np.std(reps_residuals)
-        weights_ci = 1.96 * np.std(weights_residuals)
-
-        return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
+    if reps[-1] >= 0.9 * max_reps or weights[-1] >= 0.9 * max_weights: # sets 90% threshold
+        user_level = "expert"
+       
+    # Makes sure that these predictions are capped at a certain level
+    
+  
+    # Next we calculate the 95% confidence intervals
+    # this shows that these predictions are approximations
+    # not certain values just to help users to plan workouts
+    
+  
+    return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
 
 # actual vs  prediction plot
 
