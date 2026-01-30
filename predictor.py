@@ -119,7 +119,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
                 future_reps[i] *= 1.03
         min_reps = max(last_reps * 0.7, avg_reps * 0.5)
         future_reps = np.clip(future_reps, min_reps, max_reps)
-
+        weights = None
         return days, future_days, future_reps, None, reps_ci, None, user_level
     else:
         weights_coeffs = polynomial_regression(days, weights, degree)
