@@ -116,7 +116,8 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
        future_reps = np.maximum(future_reps, last_reps)
        for i in range(1, len(future_reps)):
            if future_reps[i] < future_reps[i-1]:
-               future_reps[i] = future_reps[i-1] * 1.10
+               future_reps[i] = future_reps[i-1] * 1.05
+           future_reps[i] = max(future_reps[i], last_reps)
       
        weights = None
         
