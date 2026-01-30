@@ -110,11 +110,16 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     is_bodyweight = exercise_name.lower() in bodyweight_exercises
 
     if is_bodyweight:
-       
-        weights = None
+       last_reps = reps[-1]
+       future_reps = np.maximum(future_reps, last_reps)
+
+       for i in range(1, len(future_reps)):
+           if future_reps[i] < future_reps[i-1]:
+               future_reps[i] = future_reps[i-1] * 1.02
+       weights = None
         
-        future_weights = None
-        return days, future_days, future_reps, None, reps_ci, None, user_level
+       future_weights = None
+       return days, future_days, future_reps, None, reps_ci, None, user_level
     else:
         weights_coeffs = polynomial_regression(days_norm, weights, degree=2)
         future_weights = np.array([predict(weights_coeffs, d) for d in future_days_norm], dtype=float)
