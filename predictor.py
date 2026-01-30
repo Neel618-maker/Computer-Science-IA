@@ -85,7 +85,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     # get the coeffs for reps 
     days_norm = days / max(days)
     future_days_norm = future_days / max(days)
-    reps_coeffs = polynomial_regression(days, reps, degree=3)
+    reps_coeffs = polynomial_regression(days_norm, reps, degree=3)
     
 
     # Predictions for reps  in the future days
