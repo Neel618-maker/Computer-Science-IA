@@ -110,20 +110,18 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
    # basic if condition if user achieves 90% of the max reps or weights
    # They can ugrade to the next level
     if user_level == "intermediate":
-        max_reps, max_weights = 60, 20
+        max_reps, max_weights = 150, 80
     elif user_level == "expert":
-        max_reps, max_weights = 100, 70
+        max_reps, max_weights = 150, 120
     else: # user level is defaulted to intermediate
-        max_reps, max_weights = 60, 20
+        max_reps, max_weights = 150, 80
 
     if reps[-1] >= 0.9 * max_reps or weights[-1] >= 0.9 * max_weights: # sets 90% threshold
         user_level = "expert"
-        max_reps, max_weights = 100, 70
+        max_reps, max_weights = 150, 120
     # Makes sure that these predictions are capped at a certain level
     
-  # This ensures predictions do not exceed max levels
-    future_reps = np.minimum(future_reps, max_reps)
-    future_weights = np.minimum(future_weights, max_weights)
+  
     # Next we calculate the 95% confidence intervals
     # this shows that these predictions are approximations
     # not certain values just to help users to plan workouts
