@@ -87,9 +87,26 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     weights_coeffs = polynomial_regression(days, weights, degree)
 
     # Predictions for reps and weight in the future days
+
     future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
     future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
+    # Clamp predictions so they never go below last actual values
+    # Ensures reps and weights stay non negative
+    last_reps = reps[-1]
+    last_weights = weights[-1]
 
+    future_reps = np.maximum(future_reps, last_reps)
+    future_reps = np.maximum(future_weights, last_weights)
+# Trade off ensures that if weights increase for an exercise
+# Reps will be reduced proportionally 
+# This fully reflects real training as when weights increase reps may decrease
+    for i in range(len(future_days)):
+        if future_weights[i] > last_weights:
+            future_reps[i] = max(future_reps[i] - (future_weights[i] - last_weights) * 0.5, 1)
+# This is for the opposite scenario of reps increasing while weights decrease
+    for i in range(len(future_days)):
+        if future_reps[i] > last_reps:
+            future_weights[i] = max(future_weights[i] - future_reps[i] - last_reps) * 0.2, 1
    # basic if condition if user achieves 90% of the max reps or weights
    # They can ugrade to the next level
     if user_level == "intermediate":
@@ -103,8 +120,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         user_level = "expert"
         max_reps, max_weights = 100, 70
     # Makes sure that these predictions are capped at a certain level
-    future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
-    future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
+    
   # This ensures predictions do not exceed max levels
     # Next we calculate the 95% confidence intervals
     # this shows that these predictions are approximations
