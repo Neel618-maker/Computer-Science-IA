@@ -112,16 +112,19 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
        
 
        last_reps = reps[-1]
-       future_reps = np.maximum(future_reps, last_reps)
+       base_max_reps = 150 if user_level == "intermediate" else 200
+       max_reps = max(base_max_reps, int(last_reps * 1.2))
+       
 
        if len(reps) > 5:
-           recent_slope = (reps[-1] - reps[-5]) / 5
-       else:
-           recent_slope = reps[-1] - reps[0]
-       for i in range(1, len(future_reps)):
-           if future_reps[i] < future_reps[i-1]:
-               future_reps[i] = future_reps[i-1] + recent_slope
-           future_reps[i] = max(future_reps[i], last_reps)
+           growth_rate = (reps[-1] / max(reps[-5], 1)) ** (1/5)
+        
+       else: 
+           growth_rate = (reps[-1] / max(reps[0], 1)) ** (1/len(reps))
+       future_reps = [last_reps * (growth_rate ** i) for i in range(1, len(future_days)+1)]
+       future_reps = np.array(future_reps, dtype=float)
+
+       future_reps = np.clip(future_reps, last_reps, max_reps)
       
        weights = None
         
