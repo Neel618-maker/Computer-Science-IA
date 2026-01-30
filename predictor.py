@@ -74,7 +74,7 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-def predict_targets(dates, reps, weights=None, exercise_name="bench press", user_level="intermediate", degree=2):
+def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     if len(dates) < 2: # If less than 2 workouts are logged
         return None # Not enough data to make an accurate prediction
     # This function allowws dates to be converted into days since first workout
@@ -82,70 +82,84 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
     future_days = np.arange(days[-1] + 1, days[-1] + 6)
     #  +6 to predict the next 5 days weekly predictions
     # Polynomial REGRESSION FOR Reps and weighrs
-    # get the coeffs for reps 
-    
-    
-    
-    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
-    is_bodyweight = exercise_name.lower() in bodyweight_exercises
-   
-    if is_bodyweight:
-       reps_coeffs = polynomial_regression(days, reps, degree=3)
-       future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
-       residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
-       reps_ci = 1.96 * np.std(residuals)
-       reps_ci = max(reps_ci, 2)
-       last_reps = reps[-1]
-       max_reps = max(400, int(last_reps * 2))
+    # get the coeffs for reps and weights
+    reps_coeffs = polynomial_regression(days, reps, degree)
+    weights_coeffs = polynomial_regression(days, weights, degree)
 
-       future_reps = np.maximum(future_reps, last_reps)
-       poly_slopes = np.gradient(future_reps)
-       for i in range(1, len(future_reps)):
-           if future_reps[i] < future_reps[i-1]:
-               future_reps[i] = future_reps[i-1] + max(poly_slopes[i], 1) * 1.5
-       future_reps = np.clip(future_reps, last_reps, max_reps)
-      
-       return days, future_days, future_reps, None, reps_ci, None, user_level
+    # Predictions for reps and weight in the future days
+
+    future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
+    future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
+    # Clamp predictions so they never go below last actual values
+    # Ensures reps and weights stay non negative
+    last_reps = reps[-1]
+    last_weights = weights[-1]
+
    
 
     # basic if condition if user achieves 90% of the max reps or weights
    # They can ugrade to the next level
     
-     
-
-  
-       
-    else:
-        reps_coeffs = polynomial_regression(days, reps, degree=3)
-        future_reps = np.array([predict(reps_coeffs, d) for d in future_days], dtype=float)
-      
-        reps_residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
-        reps_ci = 1.96 * np.std(reps_residuals)
-
-        weights_coeffs = polynomial_regression(days, weights, degree=2)
-        future_weights = np.array([predict(weights_coeffs, d) for d in future_days], dtype=float)
-
-        weights_residuals = weights - np.array([predict(weights_coeffs, d) for d in days], dtype=float)
-        weights_ci = 1.96 * np.std(weights_residuals)
+    if user_level == "intermediate":
+        max_reps, max_weights = 150, 70
+    elif user_level == "expert":
+        max_reps, max_weights = 200, 90
+    else: # user level is defaulted to intermediate
+        max_reps, max_weights = 150, 70
+# Trade off ensures that if weights increase for an exercise
+# Reps will be reduced proportionally 
+# This fully reflects real training as when weights increase reps may decrease
+   
+    for i in range(len(future_days)):
         
-        last_reps, last_weights = reps[-1], weights[-1]
-        max_reps = max(400, int(last_reps * 2))
-        max_weights = max(200, int(last_weights * 2))
 
-        future_reps = np.clip(future_reps, last_reps, max_reps)
-        future_weights = np.clip(future_weights, last_weights, max_weights)
-
+        # There should be atrade off when it comes to predictions
+        # I came up with rules that can accomodate for this style of training
+        # First if weights  are low reps will also dip
+        if future_weights[i] < max_weights * 0.5:
+            future_reps[i] *= 0.85
+            future_weights[i] *= 1.08
+        # If weights are high reps will aso increase
+        if future_weights[i] > max_weights * 0.7:
+            future_reps[i] *= 1.05
+            future_weights[i] *= 0.97
+        # If reps are low weights will decrease
+        if future_reps[i] < max_reps * 0.4:
+            future_weights[i] *= 1.06
+            future_reps[i] *= 0.95
+        # If reps are high weights will increase
+        if future_reps[i] > max_reps * 0.7:
+            future_weights[i] *= 1.06
+            future_reps[i] *= 0.95
+        # Fatigue Cycle : every 3rd prediction reps dip slightly
+        if i % 3 == 0:
+            future_reps[i] *= 0.90
+        
+    min_reps = last_reps * 0.7
+    min_weights = last_weights * 0.7
+    future_reps = np.clip(future_reps, min_reps, max_reps)
+    future_weights = np.clip(future_weights, min_weights, max_weights)
   
+   
+
+    if reps[-1] >= 0.9 * max_reps or weights[-1] >= 0.9 * max_weights: # sets 90% threshold
+        user_level = "expert"
+        max_reps, max_weights = 150, 70
+    # Makes sure that these predictions are capped at a certain level
+    
+  
+    # Next we calculate the 95% confidence intervals
+    # this shows that these predictions are approximations
+    # not certain values just to help users to plan workouts
+    reps_ci = 1.96 * (max(reps) - min(reps)) / max(len(reps), 1)
+    weights_ci = 1.96 * (max(weights) - min(weights)) / max(len(weights), 1)
+ 
     return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
 
 # actual vs  prediction plot
 
 def plot_predictions(days, reps, weights, future_days, future_reps, future_weights, reps_ci, weights_ci, exercise, student_id, user_level="intermediate"):
     plt.figure(figsize=(12, 5))
-
-    bodyweight_exercises = ["pushups", "situps", "pullups", "plank", "lunge"]
-    is_bodyweight = exercise.lower() in bodyweight_exercises
-
 # Now we must create two subplots: one for reps and one for weights
     # reps plot
     plt.subplot(1, 2, 1)
@@ -166,30 +180,24 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.legend()
 
     # weight plot
-    if not is_bodyweight and future_weights is not None and weights is not None:
 
-    
+    plt.subplot(1, 2, 2)
     # Subplot 2
-     plt.subplot(1, 2, 2)
-     plt.plot(days, weights, label="Actual Weight", marker='o')
-     plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
-     
-     if weights_ci is not None:
-        lower_weights = np.maximum.accumulate(future_weights - weights_ci)
-        upper_weights = future_weights + weights_ci
-     
-     plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
-     plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
-     plt.xlabel("Days since first workout")
-     plt.ylabel("Weight (Kg)")
-     plt.grid(True, linestyle="--", alpha=0.6)
-     plt.legend()
+    plt.plot(days, weights, label="Actual Weight", marker='o')
+    plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
+    lower_weights = np.maximum.accumulate(future_weights - weights_ci)
+    upper_weights = future_weights + weights_ci
+    plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
+    plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
+    plt.xlabel("Days since first workout")
+    plt.ylabel("Weight (Kg)")
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.legend()
 
-    
     plt.tight_layout()
-     # makes the plot fit in one page
+    # makes the plot fit in one page
     plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
-     # Allows user to save plot as a png
+    # Allows user to save plot as a png
     plt.show()
 
     return future_days, future_reps, future_weights, reps_ci, weights_ci
@@ -265,9 +273,5 @@ def daily_leaderboard():
                 time.sleep(60) # waits a minute before checking again
 
               
-
-     
-
-
 
 
