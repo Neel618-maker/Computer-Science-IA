@@ -110,7 +110,7 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.plot(future_days, future_reps, 'x--', label="Predicted Reps")
     plt.fill_between(future_days, future_reps - reps_ci, future_reps + reps_ci,
                      color='gray', alpha=0.3, label="95% CI")
-    plt.title(f"{exercise.capitalize()} Reps Prediction")
+    plt.title(f"{exercise.capitalize()} Reps Prediction"({user_level.capitalize()}))
     plt.xlabel("Days since first workout")
     plt.ylabel("Reps")
     plt.legend()
