@@ -110,22 +110,25 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
 # Trade off ensures that if weights increase for an exercise
 # Reps will be reduced proportionally 
 # This fully reflects real training as when weights increase reps may decrease
-    growth_rate_weights = 0.02
-    growth_rate_reps = 0.01
-    max_growth_step = 2.5
+    growth_rate_weights = 0.04
+    growth_rate_reps = 0.02
+    max_growth_step = 5
     for i in range(len(future_days)):
         future_weights[i] = future_weights[i] * (1 + growth_rate_weights)
         future_reps[i] = future_reps[i] * (1 + growth_rate_reps)
 
         # If Weights are too high reps will faltten or dip and weights will dip
         if future_weights[i] > max_weights * 0.9:
-            future_weights[i] = max(future_weights[i] - 0.5 * (future_weights[i] - last_weights), 1)
-            future_reps[i] = future_reps[i] * 1.05
+            future_weights[i] = max(future_weights[i] - 0.3 * (future_weights[i] - last_weights), 1)
+            future_reps[i] = max(future_reps[i] * 0.95, 1)
 
         # If weights are too low reps will rise faster
         elif future_weights[i] < max_weights * 0.5:
             future_weights[i] = future_weights[i] * 1.05
-            future_reps[i] = max(future_reps[i] - 0.3 * (last_reps - future_reps[i]), 1)
+            future_reps[i] = max(future_reps[i] - 0.2 * (last_reps - future_reps[i]), 1)
+        # Fatigue Cycle : every 3rd prediction reps dip slightly
+        if i % 3 == 0:
+            future_reps[i] *= 0.97
         # Limits overly hgih growth for weights
         growth = future_weights[i] - last_weights
         if growth > max_growth_step * (i + 1):
