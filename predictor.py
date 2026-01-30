@@ -109,8 +109,7 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
        residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
        reps_ci = 1.96 * np.std(residuals)
 
-       residuals = reps - np.array([predict(reps_coeffs, d) for d in days])
-       reps_ci = 1.96 * np.std(residuals)
+       
 
        last_reps = reps[-1]
        future_reps = np.maximum(future_reps, last_reps)
