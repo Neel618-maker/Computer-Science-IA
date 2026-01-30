@@ -113,7 +113,9 @@ def predict_targets(dates, reps, weights=None, exercise_name="bench press", user
         
         min_reps = max(last_reps * 0.7, avg_reps * 0.5)
         future_reps = np.clip(future_reps, min_reps, max_reps)
+       
         weights = None
+        
         future_weights = None
         return days, future_days, future_reps, None, reps_ci, None, user_level
     else:
@@ -213,16 +215,19 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
      plt.subplot(1, 2, 2)
      plt.plot(days, weights, label="Actual Weight", marker='o')
      plt.plot(future_days, future_weights, label="predicted weight", linestyle='--', marker='x')
+     
      if weights_ci is not None:
-      lower_weights = np.maximum.accumulate(future_weights - weights_ci)
-      upper_weights = future_weights + weights_ci
-      plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
+        lower_weights = np.maximum.accumulate(future_weights - weights_ci)
+        upper_weights = future_weights + weights_ci
+     
+     plt.fill_between(future_days.flatten(), lower_weights, upper_weights, color='red', alpha=0.2, label="95% CI")
      plt.title(f"Weight Prediction for {exercise.capitalize()} ({user_level.capitalize()} Level)")
      plt.xlabel("Days since first workout")
      plt.ylabel("Weight (Kg)")
      plt.grid(True, linestyle="--", alpha=0.6)
      plt.legend()
 
+    
     plt.tight_layout()
      # makes the plot fit in one page
     plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
