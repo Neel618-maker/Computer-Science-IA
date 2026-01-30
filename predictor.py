@@ -117,26 +117,26 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         # I came up with rules that can accomodate for this style of training
         # First if weights  are low reps will also dip
         if future_weights[i] < max_weights * 0.5:
-            future_reps[i] -= 5
-            future_weights[i] += 2
+            future_reps[i] *= 0.90
+            future_weights[i] *= 1.05
         # If weights are high reps will aso increase
         if future_weights[i] > max_weights * 0.7:
-            future_reps[i] += 2
-            future_weights[i] -= 1
+            future_reps[i] *= 1.02
+            future_weights[i] *= 0.99
         # If reps are low weights will decrease
         if future_reps[i] < max_reps * 0.4:
-            future_weights[i] += 2
-            future_reps[i] += 1
+            future_weights[i] *= 1.03
+            future_reps[i] *= 1.01
         # If reps are high weights will increase
         if future_reps[i] > max_reps * 0.7:
-            future_weights[i] += 3
-            future_reps[i] -= 1
+            future_weights[i] *= 1.02
+            future_reps[i] *= 0.99
         # Fatigue Cycle : every 3rd prediction reps dip slightly
         if i % 3 == 0:
             future_reps[i] *= 0.97
         
-    min_reps = last_reps * 0.9
-    min_weights = last_weights * 0.9
+    min_reps = last_reps * 0.7
+    min_weights = last_weights * 0.7
     future_reps = np.clip(future_reps, min_reps, max_reps)
     future_weights = np.clip(future_weights, min_weights, max_weights)
   
