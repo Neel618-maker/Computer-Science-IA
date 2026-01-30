@@ -74,21 +74,24 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-import numpy as np
+
 
 def predict_targets(dates, reps, weights, is_bodyweight=True, user_level="intermediate"):
+    # Convert dates to days since first workout
     days = np.array([(d - dates[0]).days for d in dates])
+    future_days = np.arange(days[-1] + 1, days[-1] + 31)  # next 30 days
 
+    # --- BODYWEIGHT BRANCH (pushups, situps, pullups) ---
     if is_bodyweight:
         last_reps = reps[-1]
-        # 🚨 Higher dynamic cap
-        base_max_reps = 300 if user_level == "intermediate" else 400
-        max_reps = max(base_max_reps, int(last_reps * 1.5))
+        base_max_reps = 400 if user_level == "intermediate" else 600
+        max_reps = max(base_max_reps, int(last_reps * 2))
 
+        # Weighted cubic polynomial regression
         weights_poly = np.linspace(1, 3, len(days))
         reps_coeffs = np.polyfit(days, reps, deg=3, w=weights_poly)
 
-        future_days = np.arange(days[-1] + 1, days[-1] + 31)
+        # Polynomial predictions
         future_reps = np.array([np.polyval(reps_coeffs, d) for d in future_days], dtype=float)
 
         # Clamp + slope enforcement
@@ -97,26 +100,28 @@ def predict_targets(dates, reps, weights, is_bodyweight=True, user_level="interm
             recent_slope = (reps[-1] - reps[-5]) / 5
         else:
             recent_slope = reps[-1] - reps[0]
+        slope_boost = 1.5  # multiplier to make curve surge
         for i in range(1, len(future_reps)):
             if future_reps[i] < future_reps[i-1]:
-                future_reps[i] = future_reps[i-1] + recent_slope
+                future_reps[i] = future_reps[i-1] + recent_slope * slope_boost
         future_reps = np.clip(future_reps, last_reps, max_reps)
 
+        # Confidence interval
         residuals = reps - np.array([np.polyval(reps_coeffs, d) for d in days])
         reps_ci = 1.96 * np.std(residuals)
 
         return days, future_days, future_reps, None, reps_ci, None, user_level
 
+    # --- WEIGHTED BRANCH (bench press, squat, deadlift) ---
     else:
         last_reps, last_weights = reps[-1], weights[-1]
-        # 🚨 Higher dynamic caps
-        max_reps = max(300, int(last_reps * 1.5))
-        max_weights = max(200, int(last_weights * 1.5))
+        max_reps = max(400, int(last_reps * 2))
+        max_weights = max(200, int(last_weights * 2))
 
+        # Polynomial regression
         reps_coeffs = np.polyfit(days, reps, deg=2)
         weights_coeffs = np.polyfit(days, weights, deg=2)
 
-        future_days = np.arange(days[-1] + 1, days[-1] + 31)
         future_reps = np.array([np.polyval(reps_coeffs, d) for d in future_days], dtype=float)
         future_weights = np.array([np.polyval(weights_coeffs, d) for d in future_days], dtype=float)
 
@@ -124,13 +129,13 @@ def predict_targets(dates, reps, weights, is_bodyweight=True, user_level="interm
         future_reps = np.clip(future_reps, last_reps, max_reps)
         future_weights = np.clip(future_weights, last_weights, max_weights)
 
+        # Confidence intervals
         reps_residuals = reps - np.array([np.polyval(reps_coeffs, d) for d in days])
         weights_residuals = weights - np.array([np.polyval(weights_coeffs, d) for d in days])
         reps_ci = 1.96 * np.std(reps_residuals)
         weights_ci = 1.96 * np.std(weights_residuals)
 
-        return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level, weights, reps_ci, weights_ci, user_level
-
+        return days, future_days, future_reps, future_weights, reps_ci, weights_ci, user_level
 
 # actual vs  prediction plot
 
