@@ -22,7 +22,7 @@ def get_workout_data(student_id, exercise):
     weights = [row[2] for row in rows]
     return dates, reps, weights
    # Polynomial Regression Algorithm
-def polynomial_regression(x_values, y_values, degree=2):
+def polynomial_regression(x_values, y_values, degree=3):
     # First step is to create the design matrix where each row 
     # corresponds to a power of x (days since first workout)
     # works out exact numbers for the curve to match the data closely
@@ -74,7 +74,7 @@ def predict(coeffs, x):
 
 # predict future reps and weight using Polynomial regression and user level implementation
 # Configures user level based on performance
-def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
+def predict_targets(dates, reps, weights, user_level="intermediate", degree=3):
     if len(dates) < 2: # If less than 2 workouts are logged
         return None # Not enough data to make an accurate prediction
     # This function allowws dates to be converted into days since first workout
@@ -96,7 +96,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     last_weights = weights[-1]
 
    
-
+  # I made sure that the expert level was very hard to reach
     # basic if condition if user achieves 90% of the max reps or weights
    # They can ugrade to the next level
     
@@ -116,7 +116,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
         # There should be atrade off when it comes to predictions
         # I came up with rules that can accomodate for this style of training
         # First if weights  are low reps will also dip
-        if future_weights[i] < max_weights * 0.5:
+        if future_weights[i] < max_weights * 0.5: # 
             future_reps[i] *= 0.85
             future_weights[i] *= 1.08
         # If weights are high reps will aso increase
@@ -133,7 +133,9 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
             future_reps[i] *= 0.95
         # Fatigue Cycle : every 3rd prediction reps dip slightly
         if i % 3 == 0:
-            future_reps[i] *= 0.90
+            future_reps[i] *= 0.90 # slight decrease of 10%
+            # Allows for a more realistic system that captures exercise
+            # in case of injury or off periods for example
         
     min_reps = last_reps * 0.7
     min_weights = last_weights * 0.7
@@ -148,7 +150,7 @@ def predict_targets(dates, reps, weights, user_level="intermediate", degree=2):
     # Makes sure that these predictions are capped at a certain level
     
   
-    # Next we calculate the 95% confidence intervals
+    # Next we calculate the 96% confidence intervals
     # this shows that these predictions are approximations
     # not certain values just to help users to plan workouts
     reps_ci = 1.96 * (max(reps) - min(reps)) / max(len(reps), 1)
@@ -180,6 +182,7 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.legend()
 
     # weight plot
+    # Confidence Intervals are shaded in red
 
     plt.subplot(1, 2, 2)
     # Subplot 2
@@ -194,20 +197,20 @@ def plot_predictions(days, reps, weights, future_days, future_reps, future_weigh
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
 
-    plt.tight_layout()
+    plt.tight_layout() # ensures it fits in one seamless plot
     # makes the plot fit in one page
     plt.savefig(f"prediction_{student_id}_{exercise}_{user_level}.png")
     # Allows user to save plot as a png
     plt.show()
 
     return future_days, future_reps, future_weights, reps_ci, weights_ci
-
+  # Returns all the different variables of the plot
     # Leaderboard displays
 
 def show_leaderboard(student_id=None, exercise_filter=None):
     conn = sqlite3.connect("fitness.db") # connect to the database 
     cursor = conn.cursor()
-
+# 
     query = """
         SELECT u.student_id, u.name, w.exercise, MIN(w.datetime), MAX(w.datetime), MIN(w.reps), MAX(w.reps)
         FROM user_workouts w
